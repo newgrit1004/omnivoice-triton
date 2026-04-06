@@ -1,0 +1,43 @@
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: check-added-large-files
+        name: Check added large files
+      - id: check-json
+        name: Check json
+      - id: check-merge-conflict
+        name: Check merge conflict
+      - id: check-yaml
+        name: Check yaml
+      - id: check-toml
+        name: Check toml
+      - id: end-of-file-fixer
+        name: End of file fixer
+      - id: pretty-format-json
+        name: Pretty format json
+        args:
+          - --autofix
+      - id: trailing-whitespace
+        name: Trailing whitespace
+      - id: detect-private-key
+        name: Detect private key
+        exclude: ^docs/
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        name: Lint with ruff
+        args: [--fix]
+      - id: ruff-format
+        name: Format with ruff
+
+  - repo: local
+    hooks:
+      - id: ty
+        name: Type check with ty
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false

@@ -1,0 +1,20 @@
+[
+  {
+    "kernel": "RMSNorm",
+    "pytorch_ms": 0.026155457051710688,
+    "speedup": 6.280850987230898,
+    "triton_ms": 0.004164317399805421
+  },
+  {
+    "kernel": "SwiGLU",
+    "pytorch_ms": 0.009384918911539874,
+    "speedup": 1.5613258890961834,
+    "triton_ms": 0.006010864853443629
+  },
+  {
+    "kernel": "FusedAddRMSNorm",
+    "pytorch_ms": 0.02807102734040396,
+    "speedup": 4.211030336526297,
+    "triton_ms": 0.0066660710318130634
+  }
+]

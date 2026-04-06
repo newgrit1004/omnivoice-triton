@@ -1,0 +1,504 @@
+{
+  "generated_at": "2026-04-06T13:28:37.742444+00:00",
+  "hardware": {
+    "cuda_version": "12.8",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "vram_gb": 31.8
+  },
+  "modes": [
+    "base",
+    "triton",
+    "triton_sage",
+    "faster",
+    "hybrid",
+    "hybrid_sage"
+  ],
+  "samples": [
+    {
+      "file": "base/ko_00.wav",
+      "generation_time_s": 1.081,
+      "language": "ko",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "\uc548\ub155\ud558\uc138\uc694, \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "base/ko_01.wav",
+      "generation_time_s": 0.554,
+      "language": "ko",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "\uc624\ub298 \ub0a0\uc528\uac00 \uc815\ub9d0 \uc88b\ub124\uc694.",
+      "type": "generate"
+    },
+    {
+      "file": "base/ko_02.wav",
+      "generation_time_s": 0.609,
+      "language": "ko",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "\uc634\ub2c8\ubcf4\uc774\uc2a4 \uc74c\uc131 \ud569\uc131 \uc2dc\uc2a4\ud15c\uc785\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "base/en_00.wav",
+      "generation_time_s": 0.578,
+      "language": "en",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "Hello, nice to meet you.",
+      "type": "generate"
+    },
+    {
+      "file": "base/en_01.wav",
+      "generation_time_s": 0.466,
+      "language": "en",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "The weather is really nice today.",
+      "type": "generate"
+    },
+    {
+      "file": "base/en_02.wav",
+      "generation_time_s": 0.579,
+      "language": "en",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "Welcome to the OmniVoice text-to-speech system.",
+      "type": "generate"
+    },
+    {
+      "file": "base/zh_00.wav",
+      "generation_time_s": 0.563,
+      "language": "zh",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "\u4f60\u597d\uff0c\u5f88\u9ad8\u5174\u8ba4\u8bc6\u4f60\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "base/zh_01.wav",
+      "generation_time_s": 0.48,
+      "language": "zh",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "\u4eca\u5929\u5929\u6c14\u771f\u597d\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "base/zh_02.wav",
+      "generation_time_s": 0.571,
+      "language": "zh",
+      "mode": "base",
+      "sample_rate": 24000,
+      "text": "\u6b22\u8fce\u4f7f\u7528OmniVoice\u8bed\u97f3\u5408\u6210\u7cfb\u7edf\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "triton/ko_00.wav",
+      "generation_time_s": 0.726,
+      "language": "ko",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "\uc548\ub155\ud558\uc138\uc694, \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "triton/ko_01.wav",
+      "generation_time_s": 0.485,
+      "language": "ko",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "\uc624\ub298 \ub0a0\uc528\uac00 \uc815\ub9d0 \uc88b\ub124\uc694.",
+      "type": "generate"
+    },
+    {
+      "file": "triton/ko_02.wav",
+      "generation_time_s": 0.45,
+      "language": "ko",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "\uc634\ub2c8\ubcf4\uc774\uc2a4 \uc74c\uc131 \ud569\uc131 \uc2dc\uc2a4\ud15c\uc785\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "triton/en_00.wav",
+      "generation_time_s": 0.499,
+      "language": "en",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "Hello, nice to meet you.",
+      "type": "generate"
+    },
+    {
+      "file": "triton/en_01.wav",
+      "generation_time_s": 0.422,
+      "language": "en",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "The weather is really nice today.",
+      "type": "generate"
+    },
+    {
+      "file": "triton/en_02.wav",
+      "generation_time_s": 0.479,
+      "language": "en",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "Welcome to the OmniVoice text-to-speech system.",
+      "type": "generate"
+    },
+    {
+      "file": "triton/zh_00.wav",
+      "generation_time_s": 0.495,
+      "language": "zh",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "\u4f60\u597d\uff0c\u5f88\u9ad8\u5174\u8ba4\u8bc6\u4f60\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "triton/zh_01.wav",
+      "generation_time_s": 0.459,
+      "language": "zh",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "\u4eca\u5929\u5929\u6c14\u771f\u597d\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "triton/zh_02.wav",
+      "generation_time_s": 0.556,
+      "language": "zh",
+      "mode": "triton",
+      "sample_rate": 24000,
+      "text": "\u6b22\u8fce\u4f7f\u7528OmniVoice\u8bed\u97f3\u5408\u6210\u7cfb\u7edf\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/ko_00.wav",
+      "generation_time_s": 0.522,
+      "language": "ko",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "\uc548\ub155\ud558\uc138\uc694, \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/ko_01.wav",
+      "generation_time_s": 0.456,
+      "language": "ko",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "\uc624\ub298 \ub0a0\uc528\uac00 \uc815\ub9d0 \uc88b\ub124\uc694.",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/ko_02.wav",
+      "generation_time_s": 0.565,
+      "language": "ko",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "\uc634\ub2c8\ubcf4\uc774\uc2a4 \uc74c\uc131 \ud569\uc131 \uc2dc\uc2a4\ud15c\uc785\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/en_00.wav",
+      "generation_time_s": 0.512,
+      "language": "en",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "Hello, nice to meet you.",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/en_01.wav",
+      "generation_time_s": 0.484,
+      "language": "en",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "The weather is really nice today.",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/en_02.wav",
+      "generation_time_s": 0.532,
+      "language": "en",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "Welcome to the OmniVoice text-to-speech system.",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/zh_00.wav",
+      "generation_time_s": 0.535,
+      "language": "zh",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "\u4f60\u597d\uff0c\u5f88\u9ad8\u5174\u8ba4\u8bc6\u4f60\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/zh_01.wav",
+      "generation_time_s": 0.419,
+      "language": "zh",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "\u4eca\u5929\u5929\u6c14\u771f\u597d\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "triton_sage/zh_02.wav",
+      "generation_time_s": 0.523,
+      "language": "zh",
+      "mode": "triton_sage",
+      "sample_rate": 24000,
+      "text": "\u6b22\u8fce\u4f7f\u7528OmniVoice\u8bed\u97f3\u5408\u6210\u7cfb\u7edf\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "faster/ko_00.wav",
+      "generation_time_s": 0.334,
+      "language": "ko",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "\uc548\ub155\ud558\uc138\uc694, \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "faster/ko_01.wav",
+      "generation_time_s": 0.293,
+      "language": "ko",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "\uc624\ub298 \ub0a0\uc528\uac00 \uc815\ub9d0 \uc88b\ub124\uc694.",
+      "type": "generate"
+    },
+    {
+      "file": "faster/ko_02.wav",
+      "generation_time_s": 0.426,
+      "language": "ko",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "\uc634\ub2c8\ubcf4\uc774\uc2a4 \uc74c\uc131 \ud569\uc131 \uc2dc\uc2a4\ud15c\uc785\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "faster/en_00.wav",
+      "generation_time_s": 0.388,
+      "language": "en",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "Hello, nice to meet you.",
+      "type": "generate"
+    },
+    {
+      "file": "faster/en_01.wav",
+      "generation_time_s": 0.389,
+      "language": "en",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "The weather is really nice today.",
+      "type": "generate"
+    },
+    {
+      "file": "faster/en_02.wav",
+      "generation_time_s": 0.254,
+      "language": "en",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "Welcome to the OmniVoice text-to-speech system.",
+      "type": "generate"
+    },
+    {
+      "file": "faster/zh_00.wav",
+      "generation_time_s": 0.386,
+      "language": "zh",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "\u4f60\u597d\uff0c\u5f88\u9ad8\u5174\u8ba4\u8bc6\u4f60\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "faster/zh_01.wav",
+      "generation_time_s": 0.385,
+      "language": "zh",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "\u4eca\u5929\u5929\u6c14\u771f\u597d\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "faster/zh_02.wav",
+      "generation_time_s": 0.424,
+      "language": "zh",
+      "mode": "faster",
+      "sample_rate": 24000,
+      "text": "\u6b22\u8fce\u4f7f\u7528OmniVoice\u8bed\u97f3\u5408\u6210\u7cfb\u7edf\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/ko_00.wav",
+      "generation_time_s": 0.286,
+      "language": "ko",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "\uc548\ub155\ud558\uc138\uc694, \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/ko_01.wav",
+      "generation_time_s": 0.336,
+      "language": "ko",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "\uc624\ub298 \ub0a0\uc528\uac00 \uc815\ub9d0 \uc88b\ub124\uc694.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/ko_02.wav",
+      "generation_time_s": 0.305,
+      "language": "ko",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "\uc634\ub2c8\ubcf4\uc774\uc2a4 \uc74c\uc131 \ud569\uc131 \uc2dc\uc2a4\ud15c\uc785\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/en_00.wav",
+      "generation_time_s": 0.258,
+      "language": "en",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "Hello, nice to meet you.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/en_01.wav",
+      "generation_time_s": 0.332,
+      "language": "en",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "The weather is really nice today.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/en_02.wav",
+      "generation_time_s": 0.154,
+      "language": "en",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "Welcome to the OmniVoice text-to-speech system.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/zh_00.wav",
+      "generation_time_s": 0.27,
+      "language": "zh",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "\u4f60\u597d\uff0c\u5f88\u9ad8\u5174\u8ba4\u8bc6\u4f60\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/zh_01.wav",
+      "generation_time_s": 0.36,
+      "language": "zh",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "\u4eca\u5929\u5929\u6c14\u771f\u597d\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid/zh_02.wav",
+      "generation_time_s": 0.294,
+      "language": "zh",
+      "mode": "hybrid",
+      "sample_rate": 24000,
+      "text": "\u6b22\u8fce\u4f7f\u7528OmniVoice\u8bed\u97f3\u5408\u6210\u7cfb\u7edf\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/ko_00.wav",
+      "generation_time_s": 0.275,
+      "language": "ko",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "\uc548\ub155\ud558\uc138\uc694, \ubc18\uac11\uc2b5\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/ko_01.wav",
+      "generation_time_s": 0.33,
+      "language": "ko",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "\uc624\ub298 \ub0a0\uc528\uac00 \uc815\ub9d0 \uc88b\ub124\uc694.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/ko_02.wav",
+      "generation_time_s": 0.26,
+      "language": "ko",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "\uc634\ub2c8\ubcf4\uc774\uc2a4 \uc74c\uc131 \ud569\uc131 \uc2dc\uc2a4\ud15c\uc785\ub2c8\ub2e4.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/en_00.wav",
+      "generation_time_s": 0.356,
+      "language": "en",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "Hello, nice to meet you.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/en_01.wav",
+      "generation_time_s": 0.273,
+      "language": "en",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "The weather is really nice today.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/en_02.wav",
+      "generation_time_s": 0.127,
+      "language": "en",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "Welcome to the OmniVoice text-to-speech system.",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/zh_00.wav",
+      "generation_time_s": 0.32,
+      "language": "zh",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "\u4f60\u597d\uff0c\u5f88\u9ad8\u5174\u8ba4\u8bc6\u4f60\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/zh_01.wav",
+      "generation_time_s": 0.245,
+      "language": "zh",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "\u4eca\u5929\u5929\u6c14\u771f\u597d\u3002",
+      "type": "generate"
+    },
+    {
+      "file": "hybrid_sage/zh_02.wav",
+      "generation_time_s": 0.27,
+      "language": "zh",
+      "mode": "hybrid_sage",
+      "sample_rate": 24000,
+      "text": "\u6b22\u8fce\u4f7f\u7528OmniVoice\u8bed\u97f3\u5408\u6210\u7cfb\u7edf\u3002",
+      "type": "generate"
+    }
+  ]
+}

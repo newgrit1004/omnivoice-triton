@@ -1,0 +1,92 @@
+[project]
+name = "python-project-template"
+version = "0.1.0"
+description = "Modern Python project template with UV, Ruff, and Ty"
+authors = [
+    {name = "Your Name", email = "you@example.com"}
+]
+requires-python = ">=3.12"
+dependencies = []
+
+[project.optional-dependencies]
+dev = [
+    "ruff>=0.7.4",
+    "ty>=0.0.1a1",
+    "pytest>=8.3.3",
+    "pytest-cov>=6.0.0",
+    "pre-commit>=4.0.1",
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src"]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+fix = true
+
+[tool.ruff.lint]
+select = [
+    "E",  # pycodestyle errors
+    "W",  # pycodestyle warnings
+    "F",  # pyflakes
+    "I",  # isort
+]
+ignore = []
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+line-ending = "auto"
+
+[tool.ty.rules]
+# Triton @jit kernels use constexpr params that ty can't understand
+invalid-argument-type = "ignore"
+unknown-argument = "ignore"
+# Monkey-patching nn.Module attributes is a valid pattern
+unresolved-attribute = "ignore"
+call-non-callable = "ignore"
+non-subscriptable = "ignore"
+# sageattention has dynamic exports
+unresolved-import = "ignore"
+
+[tool.pytest.ini_options]
+pythonpath = "src"
+testpaths = ["tests"]
+addopts = [
+    "--cov=src",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=80",
+    "-v"
+]
+log_cli = true
+log_cli_level = "INFO"
+log_cli_format = "%(asctime)s [%(levelname)8s] %(message)s"
+log_cli_date_format = "%Y-%m-%d %H:%M:%S"
+
+[tool.coverage.run]
+source = ["src"]
+omit = ["*/tests/*", "*/__pycache__/*", "*/venv/*", "*/.venv/*"]
+
+[tool.coverage.report]
+precision = 2
+show_missing = true
+skip_covered = false
+
+[tool.complexipy]
+# Cognitive complexity threshold
+# 10 = strict (new projects)
+# 15 = moderate (default, existing codebases)
+# 20 = lenient (legacy code)
+max-complexity-allowed = 15
+
+[dependency-groups]
+dev = [
+    "complexipy>=5.1.0",
+    "skylos>=3.1.1",
+]

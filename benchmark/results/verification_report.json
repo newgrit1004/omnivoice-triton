@@ -1,0 +1,330 @@
+{
+  "hardware": {
+    "cuda_version": "12.8",
+    "gpu": "NVIDIA GeForce RTX 5090",
+    "platform": "linux",
+    "python": "3.12.3 (main, Mar  3 2026, 12:15:18) [GCC 13.3.0]",
+    "vram_gb": 31.8
+  },
+  "tier1": {
+    "duration_s": 2.77,
+    "failed": 0,
+    "passed": 60,
+    "returncode": 0,
+    "skipped": 0,
+    "status": "PASS",
+    "tests": [
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm[shape0-dtype0]",
+        "name": "test_fused_add_rms_norm[shape0-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm[shape0-dtype1]",
+        "name": "test_fused_add_rms_norm[shape0-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm[shape1-dtype0]",
+        "name": "test_fused_add_rms_norm[shape1-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm[shape1-dtype1]",
+        "name": "test_fused_add_rms_norm[shape1-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm[shape2-dtype0]",
+        "name": "test_fused_add_rms_norm[shape2-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm[shape2-dtype1]",
+        "name": "test_fused_add_rms_norm[shape2-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_module_wrapper",
+        "name": "test_module_wrapper",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_module_wrapper_bfloat16",
+        "name": "test_module_wrapper_bfloat16",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm_2d_input[dtype0]",
+        "name": "test_fused_add_rms_norm_2d_input[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm_2d_input[dtype1]",
+        "name": "test_fused_add_rms_norm_2d_input[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm_non_contiguous",
+        "name": "test_fused_add_rms_norm_non_contiguous",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm_determinism",
+        "name": "test_fused_add_rms_norm_determinism",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm_numerical_stability[dtype0]",
+        "name": "test_fused_add_rms_norm_numerical_stability[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_fused_norm.py::test_fused_add_rms_norm_numerical_stability[dtype1]",
+        "name": "test_fused_add_rms_norm_numerical_stability[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype0-shape0]",
+        "name": "test_triton_rms_norm_function[dtype0-shape0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype0-shape1]",
+        "name": "test_triton_rms_norm_function[dtype0-shape1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype0-shape2]",
+        "name": "test_triton_rms_norm_function[dtype0-shape2]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype0-shape3]",
+        "name": "test_triton_rms_norm_function[dtype0-shape3]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype1-shape0]",
+        "name": "test_triton_rms_norm_function[dtype1-shape0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype1-shape1]",
+        "name": "test_triton_rms_norm_function[dtype1-shape1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype1-shape2]",
+        "name": "test_triton_rms_norm_function[dtype1-shape2]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_function[dtype1-shape3]",
+        "name": "test_triton_rms_norm_function[dtype1-shape3]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype0-shape0]",
+        "name": "test_triton_rms_norm_module[dtype0-shape0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype0-shape1]",
+        "name": "test_triton_rms_norm_module[dtype0-shape1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype0-shape2]",
+        "name": "test_triton_rms_norm_module[dtype0-shape2]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype0-shape3]",
+        "name": "test_triton_rms_norm_module[dtype0-shape3]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype1-shape0]",
+        "name": "test_triton_rms_norm_module[dtype1-shape0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype1-shape1]",
+        "name": "test_triton_rms_norm_module[dtype1-shape1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype1-shape2]",
+        "name": "test_triton_rms_norm_module[dtype1-shape2]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_module[dtype1-shape3]",
+        "name": "test_triton_rms_norm_module[dtype1-shape3]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_2d_input[dtype0]",
+        "name": "test_triton_rms_norm_2d_input[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_2d_input[dtype1]",
+        "name": "test_triton_rms_norm_2d_input[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_non_contiguous[dtype0]",
+        "name": "test_triton_rms_norm_non_contiguous[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_non_contiguous[dtype1]",
+        "name": "test_triton_rms_norm_non_contiguous[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_float32",
+        "name": "test_triton_rms_norm_float32",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_single_token",
+        "name": "test_triton_rms_norm_single_token",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_determinism",
+        "name": "test_triton_rms_norm_determinism",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_numerical_stability[dtype0]",
+        "name": "test_triton_rms_norm_numerical_stability[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_rms_norm.py::test_triton_rms_norm_numerical_stability[dtype1]",
+        "name": "test_triton_rms_norm_numerical_stability[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_forward[shape0-dtype0]",
+        "name": "test_triton_swiglu_forward[shape0-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_forward[shape0-dtype1]",
+        "name": "test_triton_swiglu_forward[shape0-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_forward[shape1-dtype0]",
+        "name": "test_triton_swiglu_forward[shape1-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_forward[shape1-dtype1]",
+        "name": "test_triton_swiglu_forward[shape1-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_forward[shape2-dtype0]",
+        "name": "test_triton_swiglu_forward[shape2-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_forward[shape2-dtype1]",
+        "name": "test_triton_swiglu_forward[shape2-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_module[shape0-dtype0]",
+        "name": "test_triton_swiglu_module[shape0-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_module[shape0-dtype1]",
+        "name": "test_triton_swiglu_module[shape0-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_module[shape1-dtype0]",
+        "name": "test_triton_swiglu_module[shape1-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_module[shape1-dtype1]",
+        "name": "test_triton_swiglu_module[shape1-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_module[shape2-dtype0]",
+        "name": "test_triton_swiglu_module[shape2-dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_triton_swiglu_module[shape2-dtype1]",
+        "name": "test_triton_swiglu_module[shape2-dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_shape_mismatch_raises",
+        "name": "test_swiglu_shape_mismatch_raises",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_cpu_tensor_raises",
+        "name": "test_swiglu_cpu_tensor_raises",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_2d_input[dtype0]",
+        "name": "test_swiglu_2d_input[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_2d_input[dtype1]",
+        "name": "test_swiglu_2d_input[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_non_contiguous[dtype0]",
+        "name": "test_swiglu_non_contiguous[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_non_contiguous[dtype1]",
+        "name": "test_swiglu_non_contiguous[dtype1]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_determinism",
+        "name": "test_swiglu_determinism",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_numerical_stability[dtype0]",
+        "name": "test_swiglu_numerical_stability[dtype0]",
+        "status": "PASSED"
+      },
+      {
+        "fullname": "tests/kernels/test_swiglu.py::test_swiglu_numerical_stability[dtype1]",
+        "name": "test_swiglu_numerical_stability[dtype1]",
+        "status": "PASSED"
+      }
+    ],
+    "total": 60
+  },
+  "tier2": {
+    "duration_s": 28.44,
+    "failed": 0,
+    "passed": 0,
+    "returncode": 0,
+    "status": "PASS",
+    "tests": [],
+    "total": 0
+  },
+  "timestamp": "2026-04-06T12:58:58.182859+00:00"
+}

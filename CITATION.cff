@@ -1,0 +1,18 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+type: software
+title: "OmniVoice-Triton"
+abstract: "Triton kernel fusion and CUDA Graph optimization for OmniVoice inference acceleration"
+authors:
+  - family-names: Kim
+    given-names: Sewon
+repository-code: "https://github.com/newgrit1004/omnivoice-triton"
+license: Apache-2.0
+keywords:
+  - text-to-speech
+  - triton
+  - gpu-optimization
+  - kernel-fusion
+  - omnivoice
+  - cuda-graph
+  - non-autoregressive
