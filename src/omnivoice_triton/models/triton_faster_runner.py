@@ -2,7 +2,7 @@
 
 import logging
 
-from omnivoice_triton.models.faster_runner import FasterRunner
+from omnivoice_triton.models.faster_runner import DEFAULT_MAX_GRAPHS, FasterRunner
 from omnivoice_triton.models.patching import (
     apply_sage_attention,
     apply_triton_kernels,
@@ -40,8 +40,11 @@ class TritonFasterRunner(FasterRunner):
         device: str = "cuda",
         model_id: str = "k2-fsa/OmniVoice",
         dtype: str = "fp16",
+        max_graphs: int = DEFAULT_MAX_GRAPHS,
     ) -> None:
-        super().__init__(device=device, model_id=model_id, dtype=dtype)
+        super().__init__(
+            device=device, model_id=model_id, dtype=dtype, max_graphs=max_graphs
+        )
         self.patch_range = patch_range
         self.enable_sage_attention = enable_sage_attention
 
@@ -63,9 +66,13 @@ class TritonFasterRunner(FasterRunner):
         # Then install CUDA Graph wrapper on the patched model
         from omnivoice_triton.models.faster_runner import _CUDAGraphForward
 
-        self._graph_forward = _CUDAGraphForward(self._model)
+        self._graph_forward = _CUDAGraphForward(
+            self._model, max_graphs=self._max_graphs
+        )
         self._model.forward = self._graph_forward
 
         logger.info(
-            "HybridRunner ready (Triton kernels + CUDA Graph wrapper installed)."
+            "HybridRunner ready (Triton kernels + CUDA Graph wrapper installed, "
+            "max_graphs=%d).",
+            self._max_graphs,
         )

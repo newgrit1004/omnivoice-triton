@@ -6,6 +6,7 @@ eliminating kernel launch overhead.
 """
 
 import logging
+from collections import OrderedDict
 from typing import Any
 
 import torch
@@ -13,6 +14,10 @@ import torch
 from omnivoice_triton.models.base_runner import BaseRunner
 
 logger = logging.getLogger(__name__)
+
+# Cap on per-shape CUDA Graphs kept alive; each pins a private activation pool,
+# so an unbounded cache leaks VRAM across many distinct shapes (issue #8).
+DEFAULT_MAX_GRAPHS = 8
 
 
 class _CUDAGraphForward:
@@ -27,12 +32,20 @@ class _CUDAGraphForward:
       1. Copy inputs into static buffers
       2. Replay captured graph
       3. Return output from static buffer
+
+    Graphs are capped at ``max_graphs`` (each owns a private memory pool). Once
+    the cap is reached, new shapes run eagerly instead of capturing, keeping
+    VRAM bounded across many distinct sequence lengths (issue #8).
     """
 
-    def __init__(self, model: Any) -> None:
+    def __init__(self, model: Any, max_graphs: int = DEFAULT_MAX_GRAPHS) -> None:
+        if max_graphs < 1:
+            raise ValueError(f"max_graphs must be >= 1, got {max_graphs}")
         self._model = model
         self._original_forward = model.forward
-        self._graphs: dict[tuple[int, ...], dict] = {}
+        self._max_graphs = max_graphs
+        self._graphs: OrderedDict[tuple[int, ...], dict] = OrderedDict()
+        self._fallback_warned: set[tuple[int, ...]] = set()
 
     def _get_shape_key(self, input_ids: torch.Tensor) -> tuple[int, ...]:
         return tuple(input_ids.shape)
@@ -131,8 +144,28 @@ class _CUDAGraphForward:
             )
 
         key = self._get_shape_key(input_ids)
+        entry = self._graphs.get(key)
 
-        if key not in self._graphs:
+        if entry is None:
+            if len(self._graphs) >= self._max_graphs:
+                # Cache full: run eagerly instead of capturing, to bound VRAM
+                # and avoid re-capture thrash on many distinct shapes (issue #8).
+                if key not in self._fallback_warned:
+                    self._fallback_warned.add(key)
+                    logger.info(
+                        "CUDA Graph cache full (%d shapes); running shape %s "
+                        "eagerly. Raise max_graphs to cache more.",
+                        self._max_graphs,
+                        key,
+                    )
+                return self._original_forward(
+                    input_ids,
+                    audio_mask,
+                    None,
+                    attention_mask,
+                    document_ids,
+                    position_ids,
+                )
             entry = self._capture(
                 input_ids,
                 audio_mask,
@@ -140,8 +173,6 @@ class _CUDAGraphForward:
                 document_ids,
                 position_ids,
             )
-        else:
-            entry = self._graphs[key]
 
         # Copy ALL inputs into their static buffers before replay
         entry["static_input_ids"].copy_(input_ids)
@@ -158,8 +189,13 @@ class _CUDAGraphForward:
         return entry["static_output"]
 
     def clear(self) -> None:
-        """Release all captured graphs."""
+        """Release all captured graphs and their private memory pools."""
+        for entry in self._graphs.values():
+            entry.clear()
         self._graphs.clear()
+        self._fallback_warned.clear()
+        if torch.cuda.is_available():
+            torch.cuda.empty_cache()
 
 
 class FasterRunner(BaseRunner):
@@ -173,6 +209,9 @@ class FasterRunner(BaseRunner):
         device: Target device (default: "cuda").
         model_id: HuggingFace model ID.
         dtype: Model dtype string.
+        max_graphs: Maximum number of per-shape CUDA Graphs kept alive at once.
+            Lower this on low-VRAM GPUs; each cached graph pins a private
+            activation pool. Default: ``DEFAULT_MAX_GRAPHS``.
     """
 
     def __init__(
@@ -180,16 +219,23 @@ class FasterRunner(BaseRunner):
         device: str = "cuda",
         model_id: str = "k2-fsa/OmniVoice",
         dtype: str = "fp16",
+        max_graphs: int = DEFAULT_MAX_GRAPHS,
     ) -> None:
         super().__init__(device=device, model_id=model_id, dtype=dtype)
         self._graph_forward: _CUDAGraphForward | None = None
+        self._max_graphs = max_graphs
 
     def load_model(self) -> None:
         """Load model and install CUDA Graph forward wrapper."""
         super().load_model()
-        self._graph_forward = _CUDAGraphForward(self._model)
+        self._graph_forward = _CUDAGraphForward(
+            self._model, max_graphs=self._max_graphs
+        )
         self._model.forward = self._graph_forward
-        logger.info("FasterRunner ready (CUDA Graph wrapper installed).")
+        logger.info(
+            "FasterRunner ready (CUDA Graph wrapper installed, max_graphs=%d).",
+            self._max_graphs,
+        )
 
     def unload_model(self) -> None:
         """Release graphs and unload model."""
