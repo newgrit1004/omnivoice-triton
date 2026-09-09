@@ -11,6 +11,7 @@ import threading
 import time
 from collections import OrderedDict
 from contextlib import asynccontextmanager
+from dataclasses import replace
 from datetime import UTC, datetime
 from enum import Enum
 from pathlib import Path
@@ -38,6 +39,7 @@ from omnivoice_triton.serving import (
     WorkerLifecycleReporter,
     WorkerRuntimeState,
 )
+from omnivoice_triton.serving.sentence_pauses import PAUSE_SECONDS, split_sentences
 
 logger = logging.getLogger(__name__)
 
@@ -1637,6 +1639,7 @@ def create_app(
         duration: str | None = Form(None),
         denoise: bool = Form(True),
         preprocess_prompt: bool = Form(True),
+        insert_pauses: bool = Form(False),
         postprocess_output: str | None = Form("true"),
         postprocess_mode: str | None = Form(None),
         ref_audio: UploadFile | None = File(None),
@@ -1726,6 +1729,14 @@ def create_app(
             postprocess_mode,
         )
 
+        sentences = split_sentences(text_value) if insert_pauses else [text_value]
+        if len(sentences) > 1 and duration_value is not None:
+            raise HTTPException(
+                400,
+                detail="duration cannot be combined with insert_pauses for multiple "
+                "sentences; use speed instead.",
+            )
+
         request_id = uuid4().hex[:12]
         started_at = _utc_now()
         request_started_perf = time.perf_counter()
@@ -1803,49 +1814,76 @@ def create_app(
             if mode in {GenerateMode.design, GenerateMode.clone} and instruct_value:
                 batched_instruct = instruct_value
 
-            batch_estimate_started_perf = time.perf_counter()
-            target_tokens = _estimate_target_tokens(
-                model,
-                text=text_value,
-                voice_clone_prompt=voice_clone_prompt,
-                speed=speed_value,
-                duration=duration_value,
-            )
-            conditioning_tokens = _estimate_conditioning_tokens(
-                model,
-                text=text_value,
-                language=language_value,
-                instruct=instruct_value,
-                voice_clone_prompt=voice_clone_prompt,
-                denoise=gen_config.denoise,
-                token_cache=app.state.token_estimate_cache,
-            )
-            batch_estimate_ms = (
-                time.perf_counter() - batch_estimate_started_perf
-            ) * 1000.0
-            batch_key = _build_batch_key(
-                model,
-                voice_clone_prompt=voice_clone_prompt,
-                target_tokens=target_tokens,
-                generation_config=gen_config,
-            )
-            pending = PendingGeneration(
-                request_id=request_id,
-                mode=mode.value,
-                text=text_value,
-                language=language_value,
-                instruct=batched_instruct,
-                voice_clone_prompt=voice_clone_prompt,
-                speed=speed_value,
-                duration=duration_value,
-                target_tokens=target_tokens,
-                conditioning_tokens=conditioning_tokens,
-                max_sequence_length=target_tokens + conditioning_tokens,
-                batch_key=batch_key,
-                generation_config=gen_config,
-            )
-            pre_batch_ms = (time.perf_counter() - request_started_perf) * 1000.0
-            batch_result = batcher.submit(pending)
+            results = []
+            for sentence in sentences:
+                batch_estimate_started_perf = time.perf_counter()
+                target_tokens = _estimate_target_tokens(
+                    model,
+                    text=sentence,
+                    voice_clone_prompt=voice_clone_prompt,
+                    speed=speed_value,
+                    duration=duration_value,
+                )
+                conditioning_tokens = _estimate_conditioning_tokens(
+                    model,
+                    text=sentence,
+                    language=language_value,
+                    instruct=instruct_value,
+                    voice_clone_prompt=voice_clone_prompt,
+                    denoise=gen_config.denoise,
+                    token_cache=app.state.token_estimate_cache,
+                )
+                batch_estimate_ms += (
+                    time.perf_counter() - batch_estimate_started_perf
+                ) * 1000.0
+                batch_key = _build_batch_key(
+                    model,
+                    voice_clone_prompt=voice_clone_prompt,
+                    target_tokens=target_tokens,
+                    generation_config=gen_config,
+                )
+                pending = PendingGeneration(
+                    request_id=request_id,
+                    mode=mode.value,
+                    text=sentence,
+                    language=language_value,
+                    instruct=batched_instruct,
+                    voice_clone_prompt=voice_clone_prompt,
+                    speed=speed_value,
+                    duration=duration_value,
+                    target_tokens=target_tokens,
+                    conditioning_tokens=conditioning_tokens,
+                    max_sequence_length=target_tokens + conditioning_tokens,
+                    batch_key=batch_key,
+                    generation_config=gen_config,
+                )
+                if not results:
+                    pre_batch_ms = (time.perf_counter() - request_started_perf) * 1000.0
+                results.append(batcher.submit(pending))
+
+            batch_result = results[0]
+            if len(results) > 1:
+                # Timings and token totals span all sentence batches. GPU samples
+                # cannot be combined accurately, so omit those for split requests.
+                batch_result = replace(
+                    batch_result,
+                    queue_wait_ms=sum(r.queue_wait_ms for r in results),
+                    batch_exec_ms=sum(r.batch_exec_ms for r in results),
+                    batch_requests=sum(r.batch_requests for r in results),
+                    batch_target_tokens=sum(r.batch_target_tokens for r in results),
+                    batch_conditioning_tokens=sum(
+                        r.batch_conditioning_tokens for r in results
+                    ),
+                    batch_max_sequence_length=max(
+                        r.batch_max_sequence_length for r in results
+                    ),
+                    peak_vram_gb=max(r.peak_vram_gb for r in results),
+                    gpu_metrics=None,
+                    generation_metrics={
+                        key: sum(r.generation_metrics.get(key, 0.0) for r in results)
+                        for key in {k for r in results for k in r.generation_metrics}
+                    },
+                )
 
             response_encode_started_perf = time.perf_counter()
             audio = _to_numpy(batch_result.audio)
@@ -1853,6 +1891,12 @@ def create_app(
                 getattr(model, "sampling_rate", app.state.sample_rate)
                 or app.state.sample_rate
             )
+            if len(results) > 1:
+                gap = np.zeros(round(sample_rate * PAUSE_SECONDS), dtype=audio.dtype)
+                parts = [audio]
+                for result in results[1:]:
+                    parts.extend((gap, _to_numpy(result.audio)))
+                audio = np.concatenate(parts)
             wav_bytes = _to_wav_bytes(audio, sample_rate)
             if app.state.save_dir is not None:
                 saved_path = _save_output(
@@ -1903,6 +1947,8 @@ def create_app(
                     batch_result.batch_max_sequence_length
                 ),
                 "X-OmniVoice-Batch-Lane": batch_key.lane,
+                "X-OmniVoice-Insert-Pauses": str(insert_pauses).lower(),
+                "X-OmniVoice-Sentence-Count": str(len(sentences)),
                 "X-OmniVoice-Postprocess-Mode": postprocess_mode_value,
                 "X-OmniVoice-Prompt-Source": prompt_source,
             }

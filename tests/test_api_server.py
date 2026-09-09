@@ -11,6 +11,7 @@ from types import SimpleNamespace
 from typing import Any
 
 import numpy as np
+import pytest
 import soundfile as sf
 import torch
 from fastapi.testclient import TestClient
@@ -984,3 +985,127 @@ def test_generate_validation_errors(tmp_path: Path) -> None:
             },
         )
         assert clone_prompt_with_ref_text.status_code == 400
+
+
+@pytest.mark.parametrize("postprocess_mode", ["full", "light", "off"])
+@pytest.mark.parametrize("mode", ["auto", "design", "clone"])
+def test_insert_pauses_wav_and_options(
+    tmp_path: Path, postprocess_mode: str, mode: str
+) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+    data = {
+        "mode": mode,
+        "text": "Hello there. How are you? Goodbye!",
+        "insert_pauses": "true",
+        "postprocess_mode": postprocess_mode,
+        "speed": "1.2",
+        "language": "en",
+    }
+    files = None
+    if mode != "auto":
+        data["instruct"] = "calm voice"
+    if mode == "clone":
+        data["ref_text"] = "Reference voice."
+        files = {"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")}
+    with TestClient(app) as client:
+        response = client.post("/generate", data=data, files=files)
+    assert response.status_code == 200, response.text
+    audio, rate = sf.read(BytesIO(response.content))
+    assert rate == 24000
+    assert len(audio) == 3 * 2400 + 2 * 7200
+    np.testing.assert_array_equal(audio[2400:9600], 0)
+    np.testing.assert_array_equal(audio[12000:19200], 0)
+    assert np.all(audio[:2400] > 0)
+    assert np.all(audio[9600:12000] > 0)
+    assert np.all(audio[19200:] > 0)
+    assert response.headers["x-omnivoice-audio-duration-s"] == "0.900"
+    assert response.headers["x-omnivoice-sentence-count"] == "3"
+    assert response.headers["x-omnivoice-insert-pauses"] == "true"
+    assert response.headers["x-omnivoice-generate-total-ms"] == "33.00"
+    assert (
+        Path(response.headers["x-omnivoice-saved-path"]).read_bytes()
+        == response.content
+    )
+    calls = created[0].model.calls
+    assert [c["text"] for c in calls] == [
+        ["Hello there."],
+        ["How are you?"],
+        ["Goodbye!"],
+    ]
+    for call in calls:
+        assert call["speed"] == [1.2]
+        assert call["language"] == ["en"]
+        assert call["generation_config"].postprocess_mode == postprocess_mode
+        if mode != "auto":
+            assert call["instruct"] == ["calm voice"]
+    if mode == "clone":
+        assert len(created[0].model.prompt_calls) == 1
+        assert all(
+            c["voice_clone_prompt"][0] is calls[0]["voice_clone_prompt"][0]
+            for c in calls
+        )
+
+
+@pytest.mark.parametrize("flag", [None, "false", "true"])
+def test_insert_pauses_default_and_single_sentence(tmp_path: Path, flag) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+    text = "One sentence." if flag == "true" else "First sentence. Second sentence."
+    data = {"mode": "auto", "text": text}
+    if flag is not None:
+        data["insert_pauses"] = flag
+    with TestClient(app) as client:
+        response = client.post("/generate", data=data)
+    assert response.status_code == 200
+    audio, _ = sf.read(BytesIO(response.content))
+    assert len(audio) == 2400
+    assert created[0].model.calls[0]["text"] == [text]
+    assert len(created[0].model.calls) == 1
+
+
+def test_insert_pauses_validation(tmp_path: Path) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+    with TestClient(app) as client:
+        invalid = client.post(
+            "/generate",
+            data={"mode": "auto", "text": "Hello.", "insert_pauses": "maybe"},
+        )
+        duration = client.post(
+            "/generate",
+            data={
+                "mode": "auto",
+                "text": "Hello. Goodbye.",
+                "insert_pauses": "true",
+                "duration": "2",
+            },
+        )
+    assert invalid.status_code == 422
+    assert duration.status_code == 400
+    assert "duration" in duration.json()["detail"]
+    assert not created[0].model.calls
+
+
+@pytest.mark.parametrize(
+    ("text", "expected"),
+    [
+        (
+            "Dr. Smith paid 3.14 dollars. Thanks!",
+            ["Dr. Smith paid 3.14 dollars.", "Thanks!"],
+        ),
+        ('He said "Hello!" Then left.', ['He said "Hello!"', "Then left."]),
+        ("你好。再见！", ["你好。", "再见！"]),
+        ("Really?!\nYes... Okay", ["Really?!", "Yes...", "Okay"]),
+        ("Visit example.com today. Bye.", ["Visit example.com today.", "Bye."]),
+        (
+            "Meet J. Smith in the U.S. today. Bye.",
+            ["Meet J. Smith in the U.S. today.", "Bye."],
+        ),
+        ("No punctuation", ["No punctuation"]),
+    ],
+)
+def test_split_sentences(text: str, expected: list[str]) -> None:
+    from omnivoice_triton.serving.sentence_pauses import split_sentences
+
+    assert split_sentences(text) == expected

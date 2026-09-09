@@ -107,6 +107,7 @@ Common optional fields:
 | `preprocess_prompt` | Boolean, default `true`. |
 | `postprocess_output` | Boolean-like string, default `true`. |
 | `postprocess_mode` | Optional postprocess mode override. |
+| `insert_pauses` | Boolean, default `false`. Synthesize sentences separately and insert 300 ms of silence between them after post-processing. |
 
 ### Auto Mode
 
@@ -221,3 +222,37 @@ LINGUA_WORKER_PUBLIC_BASE_URL=http://74.48.140.178:43531
 
 Those register and heartbeat calls are outgoing callbacks from the worker to the
 control plane. They are not inbound routes served by this OmniVoice worker.
+
+### Optional sentence pauses
+
+Add `-F 'insert_pauses=true'` to any `/generate` request, for example:
+
+```bash
+curl -X POST "$BASE_URL/generate" \
+  -F 'mode=auto' \
+  -F 'text=Hello there. How are you today?' \
+  -F 'postprocess_mode=light' \
+  -F 'insert_pauses=true' \
+  --output speech.wav
+```
+
+This works in `auto`, `design`, and `clone` modes with `full`, `light`, or `off`
+post-processing. The default remains unchanged. Single sentences receive no added
+silence, and no gap is added before the first or after the last sentence. Existing
+model-generated silence is preserved, so the total boundary pause can exceed 300 ms.
+
+Sentence splitting uses punctuation (`.`, `!`, `?`, `。`, `！`, `？`), preserving
+common English abbreviations, initials, decimals, and closing quotes. It is a
+heuristic, not a language-specific sentence parser. Each sentence is a separate
+synthesis using the same language, instruction, speed, and clone prompt. This can
+increase latency and change prosody or voice consistency, especially without a
+clone prompt. Use `speed` to adjust pacing; an explicit `duration` with multiple
+sentences and `insert_pauses=true` returns HTTP 400.
+
+Response headers include `X-OmniVoice-Insert-Pauses` and
+`X-OmniVoice-Sentence-Count`. WAV duration and saved files include inserted silence.
+For multiple sentences, batch timing, request counts, token totals, and generation
+stage timings sum across participating batches (which may include other requests);
+sequence length and VRAM report maxima. Batch lane reports the last sentence's
+lane. GPU sample metrics are omitted because separate sampling windows cannot be
+accurately merged.
