@@ -3,9 +3,12 @@
 from omnivoice_triton.serving.batching import (
     BatchedGenerationResult,
     ClonePromptCache,
+    CudaFaultError,
     GenerationBatcher,
     GenerationBatchKey,
     PendingGeneration,
+    is_cuda_fault,
+    prompt_to_cpu,
 )
 from omnivoice_triton.serving.gpu_metrics import BatchGpuMetrics, GPUMetricsMonitor
 from omnivoice_triton.serving.worker_lifecycle import (
@@ -18,6 +21,7 @@ __all__ = [
     "BatchedGenerationResult",
     "BatchGpuMetrics",
     "ClonePromptCache",
+    "CudaFaultError",
     "GenerationBatchKey",
     "GenerationBatcher",
     "GPUMetricsMonitor",
@@ -25,4 +29,6 @@ __all__ = [
     "WorkerCallbackConfig",
     "WorkerLifecycleReporter",
     "WorkerRuntimeState",
+    "is_cuda_fault",
+    "prompt_to_cpu",
 ]

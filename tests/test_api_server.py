@@ -49,6 +49,16 @@ def _fake_wav_bytes() -> bytes:
     return buffer.getvalue()
 
 
+class _FakeGraphForward:
+    """Stands in for the CUDA Graph forward wrapper: records which thread clears it."""
+
+    def __init__(self) -> None:
+        self.clear_threads: list[str] = []
+
+    def clear(self) -> None:
+        self.clear_threads.append(threading.current_thread().name)
+
+
 class _FakeModel:
     def __init__(self, *, generate_delay_s: float = 0.0) -> None:
         self.sampling_rate = 24000
@@ -60,6 +70,10 @@ class _FakeModel:
         )
         self.calls: list[dict[str, Any]] = []
         self.prompt_calls: list[dict[str, Any]] = []
+        self.prompt_threads: list[str] = []
+        self.prompt_error: BaseException | None = None
+        self.generate_error: BaseException | None = None
+        self.forward = _FakeGraphForward()
         self.generate_delay_s = generate_delay_s
         self._last_generation_metrics = {
             "generate_total_ms": 11.0,
@@ -107,6 +121,9 @@ class _FakeModel:
             "preprocess_prompt": preprocess_prompt,
         }
         self.prompt_calls.append(call)
+        self.prompt_threads.append(threading.current_thread().name)
+        if self.prompt_error is not None:
+            raise self.prompt_error
         return SimpleNamespace(
             ref_audio_tokens=torch.zeros((8, 48), dtype=torch.long),
             ref_text=ref_text or "Auto transcript.",
@@ -115,6 +132,8 @@ class _FakeModel:
 
     def generate(self, **kwargs: Any) -> list[np.ndarray]:
         self.calls.append(kwargs)
+        if self.generate_error is not None:
+            raise self.generate_error
         texts = kwargs["text"]
         if isinstance(texts, str):
             texts = [texts]
@@ -1109,3 +1128,146 @@ def test_split_sentences(text: str, expected: list[str]) -> None:
     from omnivoice_triton.serving.sentence_pauses import split_sentences
 
     assert split_sentences(text) == expected
+
+
+def _design_request() -> dict[str, Any]:
+    return {
+        "data": {
+            "mode": "design",
+            "text": "Hello from the API.",
+            "instruct": "female, young adult",
+        }
+    }
+
+
+def test_clone_prompt_encoding_runs_on_the_batcher_thread(tmp_path: Path) -> None:
+    """Prompt encoding must never overlap a CUDA Graph capture: it runs with batches."""
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+
+    with TestClient(app) as client:
+        register = client.post(
+            "/clone-prompts",
+            data={"ref_text": "Registered transcript."},
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+        warm = client.post(
+            "/cache/warm?wait=true",
+            data={"mode": "clone", "ref_text": "Warmed transcript."},
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+        upload = client.post(
+            "/generate",
+            data={
+                "mode": "clone",
+                "text": "Clone me.",
+                "ref_text": "Uploaded transcript.",
+            },
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+
+    assert register.status_code == 200
+    assert warm.status_code == 200
+    assert upload.status_code == 200
+    assert created[0].model.prompt_threads == ["omnivoice-batcher"] * 3
+
+
+def test_cuda_fault_in_batch_marks_worker_dead(tmp_path: Path) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False, start_worker_callback=False)
+
+    with TestClient(app) as client:
+        created[0].model.generate_error = RuntimeError(
+            "CUDA error: device-side assert triggered"
+        )
+        failed = client.post("/generate", **_design_request())
+        assert failed.status_code == 503
+        assert "device-side assert" in failed.json()["detail"]
+
+        health = client.get("/health")
+        assert health.status_code == 503
+        payload = health.json()
+        assert payload["status"] == "error"
+        assert "device-side assert" in payload["cuda_fault"]["reason"]
+        assert payload["worker"]["status"] == "dead"
+        assert payload["worker"]["assignable"] is False
+
+        healthz = client.get("/healthz")
+        assert healthz.status_code == 503
+        assert healthz.json()["error"] == "cuda_fault"
+        assert client.get("/worker/state").json()["status"] == "dead"
+
+        created[0].model.generate_error = None
+        later = client.post("/generate", **_design_request())
+        assert later.status_code == 503
+        assert later.json()["error"] == "cuda_fault"
+        register = client.post(
+            "/clone-prompts",
+            data={"ref_text": "Reference transcript."},
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+        assert register.status_code == 503
+        assert register.json()["error"] == "cuda_fault"
+
+    assert len(created[0].model.calls) == 1
+
+
+def test_cuda_fault_in_prompt_encoding_marks_worker_dead(tmp_path: Path) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+
+    with TestClient(app) as client:
+        created[0].model.prompt_error = RuntimeError(
+            "CUDA error: operation not permitted when stream is capturing"
+        )
+        register = client.post(
+            "/clone-prompts",
+            data={"ref_text": "Reference transcript."},
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+        assert register.status_code == 503
+        assert client.get("/health").status_code == 503
+        assert client.get("/healthz").status_code == 503
+
+
+def test_cuda_out_of_memory_keeps_worker_healthy(tmp_path: Path) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+
+    with TestClient(app) as client:
+        created[0].model.generate_error = torch.OutOfMemoryError(
+            "CUDA out of memory. Tried to allocate 20.00 MiB."
+        )
+        failed = client.post("/generate", **_design_request())
+        assert failed.status_code == 500
+        assert client.get("/health").status_code == 200
+        assert client.get("/healthz").status_code == 200
+
+        created[0].model.generate_error = None
+        assert client.post("/generate", **_design_request()).status_code == 200
+
+
+def test_failed_requests_clear_cuda_graphs_only_on_the_batcher_thread(
+    tmp_path: Path,
+) -> None:
+    """Clearing graphs from a request thread could free one the batcher is replaying."""
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+
+    with TestClient(app) as client:
+        model = created[0].model
+        model.generate_error = ValueError("bad batch input")
+        assert client.post("/generate", **_design_request()).status_code == 400
+        model.generate_error = None
+
+        model.prompt_error = RuntimeError("prompt encoder failed")
+        register = client.post(
+            "/clone-prompts",
+            data={"ref_text": "Reference transcript."},
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+        assert register.status_code == 500
+        assert client.get("/health").status_code == 200
+
+    assert model.forward.clear_threads
+    assert set(model.forward.clear_threads) == {"omnivoice-batcher"}

@@ -134,13 +134,28 @@ class WorkerRuntimeState:
         self._lock = threading.Lock()
         self._active_requests = 0
         self._draining = False
+        self._cuda_fault: dict[str, str] | None = None
 
     def begin_request(self) -> bool:
         with self._lock:
-            if self._draining:
+            if self._draining or self._cuda_fault is not None:
                 return False
             self._active_requests += 1
             return True
+
+    def mark_cuda_fault(self, reason: str) -> None:
+        """Record that the CUDA context failed; from now on the worker reports dead."""
+        with self._lock:
+            if self._cuda_fault is None:
+                self._cuda_fault = {
+                    "reason": reason,
+                    "at": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                }
+
+    @property
+    def cuda_fault(self) -> dict[str, str] | None:
+        with self._lock:
+            return dict(self._cuda_fault) if self._cuda_fault is not None else None
 
     def end_request(self) -> None:
         with self._lock:
@@ -165,13 +180,23 @@ class WorkerRuntimeState:
         with self._lock:
             active_requests = self._active_requests
             draining = self._draining
+            cuda_fault = (
+                dict(self._cuda_fault) if self._cuda_fault is not None else None
+            )
+        if cuda_fault is not None:
+            status = "dead"
+        else:
+            status = "draining" if draining else "healthy"
         return {
-            "status": "draining" if draining else "healthy",
+            "status": status,
             "active_requests": active_requests,
             "queue_depth": active_requests,
             "capacity": self.capacity,
-            "assignable": not draining and active_requests < self.capacity,
+            "assignable": (
+                not draining and cuda_fault is None and active_requests < self.capacity
+            ),
             "draining": draining,
+            "cuda_fault": cuda_fault,
         }
 
 
@@ -266,6 +291,17 @@ class WorkerLifecycleReporter:
             daemon=True,
         )
         self._thread.start()
+
+    def report_now(self) -> None:
+        """Send one heartbeat now instead of at the next interval (e.g. once dead)."""
+        if not self.config.public_base_url:
+            return
+        threading.Thread(
+            target=self._post,
+            args=(self.config.heartbeat_url, "heartbeat"),
+            name="lingua-worker-callback-now",
+            daemon=True,
+        ).start()
 
     def stop(self, timeout_s: float = 5.0, *, final_heartbeat: bool = True) -> None:
         if final_heartbeat and self.config.public_base_url:

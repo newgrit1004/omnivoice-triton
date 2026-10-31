@@ -82,6 +82,18 @@ work before unloading. `/health`, `/healthz`, and `/worker` expose the current
 worker status, active request count, assignability, callback config, and public
 base URL.
 
+If the CUDA context fails (a device-side assert, an illegal memory access, or a
+failed CUDA Graph capture; out-of-memory errors do not count), the worker stops
+taking work for good: `/health` and `/healthz` return `503`, the worker status
+becomes `dead` (sent to Lingua in an immediate heartbeat), and new work returns
+`503` with `{"ok": false, "error": "cuda_fault", "detail": "..."}`. Restart the
+process to recover; the failed context cannot be reused.
+
+All CUDA work runs on the batcher thread: generation batches, and voice prompt
+encoding for `/clone-prompts`, `/cache/warm`, and uploaded `ref_audio`, which
+runs between batches. Encoding a prompt from a request thread while a CUDA Graph
+was being captured used to abort the capture and break the process.
+
 ## Overview
 
 The server is a thin HTTP layer around:
@@ -213,7 +225,8 @@ cd /workspace/omnivoice-triton
 
 ### `GET /healthz`
 
-Returns a compact readiness response once the model and batcher are ready:
+Returns a compact readiness response once the model and batcher are ready
+(`503` while loading, or with `"error": "cuda_fault"` after a CUDA failure):
 
 ```json
 {
@@ -226,7 +239,8 @@ Returns a compact readiness response once the model and batcher are ready:
 
 ### `GET /health`
 
-Returns runtime status:
+Returns runtime status (with HTTP `503`, `"status": "error"`, and a
+`cuda_fault` reason after a CUDA failure):
 
 - model checkpoint
 - runner

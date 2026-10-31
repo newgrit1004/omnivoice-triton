@@ -2,21 +2,80 @@
 
 from __future__ import annotations
 
+import gc
 import hashlib
 import logging
 import threading
 import time
 from collections import OrderedDict, deque
+from collections.abc import Callable, Iterator
 from concurrent.futures import Future
 from dataclasses import dataclass, field
-from typing import Any
+from typing import Any, TypeVar
 
 import torch
 from omnivoice import OmniVoiceGenerationConfig
 
+from omnivoice_triton.models.faster_runner import CudaGraphCaptureError
 from omnivoice_triton.serving.gpu_metrics import BatchGpuMetrics, GPUMetricsMonitor
 
 logger = logging.getLogger(__name__)
+
+T = TypeVar("T")
+
+
+class CudaFaultError(RuntimeError):
+    """The process's CUDA context failed; the worker refuses work until restarted."""
+
+
+def _exception_chain(exc: BaseException) -> Iterator[BaseException]:
+    seen: set[int] = set()
+    pending: list[BaseException] = [exc]
+    while pending:
+        item = pending.pop()
+        if id(item) in seen:
+            continue
+        seen.add(id(item))
+        yield item
+        for linked in (item.__cause__, item.__context__):
+            if linked is not None:
+                pending.append(linked)
+
+
+def is_cuda_fault(exc: BaseException) -> bool:
+    """Whether an error means the CUDA context can no longer be trusted.
+
+    Device-side asserts, illegal addresses and failed CUDA Graph captures are sticky or
+    leave corrupted state behind; out-of-memory errors are recoverable and do not count.
+    """
+    accelerator_error = getattr(torch, "AcceleratorError", None)
+    for item in _exception_chain(exc):
+        if isinstance(item, torch.OutOfMemoryError):
+            continue
+        if isinstance(item, CudaFaultError | CudaGraphCaptureError):
+            return True
+        if accelerator_error is not None and isinstance(item, accelerator_error):
+            return True
+        if isinstance(item, RuntimeError) and "CUDA error" in str(item):
+            return True
+    return False
+
+
+def _release_failure_frames(exc: BaseException) -> None:
+    """Drop the tracebacks of a failed GPU call (log them first).
+
+    The frames hold the call's GPU tensors, and once the error is wrapped and re-raised
+    through the HTTP stack they sit in reference cycles until a full GC pass: after a
+    burst of out-of-memory failures the server kept ~17 GB allocated and every later
+    request failed too.
+    """
+    for item in _exception_chain(exc):
+        item.__traceback__ = None
+
+
+def _describe_fault(exc: BaseException, where: str) -> str:
+    message = str(exc).strip().splitlines()[0] if str(exc).strip() else ""
+    return f"{where}: {type(exc).__name__}: {message}"
 
 
 @dataclass(frozen=True)
@@ -145,22 +204,41 @@ class ClonePromptCache:
         return ClonePromptCacheResult(prompt=prompt, source="miss")
 
     def _to_cpu_prompt(self, prompt: Any) -> Any:
-        ref_audio_tokens = getattr(prompt, "ref_audio_tokens", None)
-        if isinstance(ref_audio_tokens, torch.Tensor):
-            return type(prompt)(
-                ref_audio_tokens=ref_audio_tokens.detach().cpu(),
-                ref_text=getattr(prompt, "ref_text"),
-                ref_rms=float(getattr(prompt, "ref_rms")),
-            )
-        return prompt
+        return prompt_to_cpu(prompt)
 
     def __len__(self) -> int:
         with self._lock:
             return len(self._entries)
 
 
+def prompt_to_cpu(prompt: Any) -> Any:
+    """Copy a clone prompt's audio tokens to host memory (a no-op if already there)."""
+    ref_audio_tokens = getattr(prompt, "ref_audio_tokens", None)
+    if isinstance(ref_audio_tokens, torch.Tensor):
+        return type(prompt)(
+            ref_audio_tokens=ref_audio_tokens.detach().cpu(),
+            ref_text=getattr(prompt, "ref_text"),
+            ref_rms=float(getattr(prompt, "ref_rms")),
+        )
+    return prompt
+
+
+@dataclass
+class _GpuTask:
+    """Work queued to run on the batcher thread between batches."""
+
+    name: str
+    fn: Callable[[], Any]
+    future: Future[Any] = field(default_factory=Future)
+
+
 class GenerationBatcher:
-    """Background worker that merges compatible requests into one generate call."""
+    """Background worker that merges compatible requests into one generate call.
+
+    Its thread is the only one that should touch CUDA: batches run on it, and other GPU
+    work (encoding a voice prompt) goes through run_on_gpu_thread so it can never
+    overlap a CUDA Graph capture or pile up next to a batch.
+    """
 
     def __init__(
         self,
@@ -173,6 +251,7 @@ class GenerationBatcher:
         max_batch_padding_ratio: float = 1.5,
         batch_bucket_sizes: tuple[int, ...] | None = None,
         gpu_metrics_monitor: GPUMetricsMonitor | None = None,
+        on_cuda_fault: Callable[[str], None] | None = None,
     ) -> None:
         self._model = model
         self.collect_ms = max(0.0, collect_ms)
@@ -184,10 +263,14 @@ class GenerationBatcher:
             sorted({size for size in batch_bucket_sizes or () if size > 0})
         )
         self._gpu_metrics_monitor = gpu_metrics_monitor
+        self._on_cuda_fault = on_cuda_fault
 
         self._condition = threading.Condition()
         self._pending: deque[PendingGeneration] = deque()
+        self._tasks: deque[_GpuTask] = deque()
+        self._last_ran_task = False
         self._closed = False
+        self._cuda_fault: str | None = None
         self._worker = threading.Thread(
             target=self._run,
             name="omnivoice-batcher",
@@ -195,15 +278,32 @@ class GenerationBatcher:
         )
         self._worker.start()
 
+    @property
+    def cuda_fault(self) -> str | None:
+        """Why the CUDA context is considered failed, or None while healthy."""
+        with self._condition:
+            return self._cuda_fault
+
     def submit(self, request: PendingGeneration) -> BatchedGenerationResult:
         """Queue a request and block until its merged batch finishes."""
         with self._condition:
-            if self._closed:
-                raise RuntimeError("Batcher is closed.")
+            self._raise_if_unavailable_locked()
             self._pending.append(request)
             self._condition.notify()
 
         return request.future.result()
+
+    def run_on_gpu_thread(self, fn: Callable[[], T], *, name: str) -> T:
+        """Run fn on the batcher thread between batches and return its result."""
+        if threading.current_thread() is self._worker:
+            return fn()
+        task = _GpuTask(name=name, fn=fn)
+        with self._condition:
+            self._raise_if_unavailable_locked()
+            self._tasks.append(task)
+            self._condition.notify()
+
+        return task.future.result()
 
     def close(self) -> None:
         """Stop the worker and fail any queued requests."""
@@ -211,33 +311,100 @@ class GenerationBatcher:
             self._closed = True
             pending = list(self._pending)
             self._pending.clear()
+            tasks = list(self._tasks)
+            self._tasks.clear()
             self._condition.notify_all()
 
-        error = RuntimeError("Server is shutting down.")
+        self._fail_queued(pending, tasks, RuntimeError("Server is shutting down."))
+        self._worker.join(timeout=5.0)
+
+    def _raise_if_unavailable_locked(self) -> None:
+        if self._closed:
+            raise RuntimeError("Batcher is closed.")
+        if self._cuda_fault is not None:
+            raise CudaFaultError(self._cuda_fault)
+
+    @staticmethod
+    def _fail_queued(
+        pending: list[PendingGeneration],
+        tasks: list[_GpuTask],
+        error: BaseException,
+    ) -> None:
         for request in pending:
             if not request.future.done():
                 request.future.set_exception(error)
-
-        self._worker.join(timeout=5.0)
+        for task in tasks:
+            if not task.future.done():
+                task.future.set_exception(error)
 
     def _run(self) -> None:
         while True:
+            batch: list[PendingGeneration] = []
             with self._condition:
-                while not self._pending and not self._closed:
+                while not self._pending and not self._tasks and not self._closed:
                     self._condition.wait()
 
-                if self._closed and not self._pending:
+                if self._closed and not self._pending and not self._tasks:
                     return
 
-                if self.collect_ms > 0:
-                    self._condition.wait(timeout=self.collect_ms / 1000.0)
+                # Short GPU tasks (prompt encoding) run between batches; when both are
+                # waiting they take turns, so a stream of /clone-prompts calls cannot
+                # starve /generate.
+                run_task = bool(self._tasks) and not (
+                    self._pending and self._last_ran_task
+                )
+                task = self._tasks.popleft() if run_task else None
+                self._last_ran_task = task is not None
+                if task is None:
+                    if self.collect_ms > 0:
+                        self._condition.wait(timeout=self.collect_ms / 1000.0)
+                    batch = self._select_batch_locked()
 
-                batch = self._select_batch_locked()
+            if task is not None:
+                self._execute_task(task)
+                continue
 
             if not batch:
                 continue
 
             self._execute_batch(batch)
+
+    def _execute_task(self, task: _GpuTask) -> None:
+        try:
+            result = task.fn()
+        except Exception as exc:
+            if isinstance(exc, RuntimeError):
+                logger.exception("GPU task failed name=%s", task.name)
+                _release_failure_frames(exc)
+                if is_cuda_fault(exc):
+                    self._mark_cuda_fault(_describe_fault(exc, task.name))
+                else:
+                    _cleanup_cuda_after_gpu_failure(self._model, task.name)
+            task.future.set_exception(exc)
+        else:
+            task.future.set_result(result)
+
+    def _mark_cuda_fault(self, reason: str) -> None:
+        """Refuse all further work: the context is broken until the process restarts."""
+        with self._condition:
+            if self._cuda_fault is not None:
+                return
+            self._cuda_fault = reason
+            pending = list(self._pending)
+            self._pending.clear()
+            tasks = list(self._tasks)
+            self._tasks.clear()
+
+        logger.error(
+            "CUDA context failed; refusing new work until restart reason=%s",
+            reason,
+        )
+        self._fail_queued(pending, tasks, CudaFaultError(reason))
+        if self._on_cuda_fault is not None:
+            try:
+                self._on_cuda_fault(reason)
+            except Exception:  # pragma: no cover - reporting must not hide the fault
+                logger.exception("CUDA fault callback failed.")
 
     def _select_batch_locked(self) -> list[PendingGeneration]:
         if not self._pending:
@@ -489,14 +656,22 @@ class GenerationBatcher:
                 anchor.batch_key.lane,
                 len(batch),
             )
-            _cleanup_cuda_after_failed_batch(self._model)
+            _release_failure_frames(exc)
+            if is_cuda_fault(exc):
+                self._mark_cuda_fault(_describe_fault(exc, "batch"))
+            else:
+                _cleanup_cuda_after_gpu_failure(self._model, "failed batch")
             for request in batch:
                 if not request.future.done():
                     request.future.set_exception(exc)
 
 
-def _cleanup_cuda_after_failed_batch(model: Any) -> None:
-    """Release failure-created CUDA state before the next request wave."""
+def _cleanup_cuda_after_gpu_failure(model: Any, what: str) -> None:
+    """Release failure-created CUDA state before the next request wave.
+
+    Runs on the batcher thread only: clearing CUDA Graphs from another thread could free
+    a graph while it is being replayed.
+    """
     forward = getattr(model, "forward", None)
     clear = getattr(forward, "clear", None)
     cleared_graphs = False
@@ -506,7 +681,8 @@ def _cleanup_cuda_after_failed_batch(model: Any) -> None:
             cleared_graphs = True
         except Exception:
             logger.debug(
-                "Failed to clear CUDA Graph cache after batch error.",
+                "Failed to clear CUDA Graph cache after %s.",
+                what,
                 exc_info=True,
             )
 
@@ -516,17 +692,20 @@ def _cleanup_cuda_after_failed_batch(model: Any) -> None:
     try:
         torch.cuda.synchronize()
     except Exception:
-        logger.debug("CUDA synchronize failed after batch error.", exc_info=True)
+        logger.debug("CUDA synchronize failed after %s.", what, exc_info=True)
     try:
+        # Collect first: tensors still held by reference cycles cannot be returned.
+        gc.collect()
         torch.cuda.empty_cache()
         if hasattr(torch.cuda, "ipc_collect"):
             torch.cuda.ipc_collect()
         logger.info(
-            "CUDA cleanup complete after failed batch cleared_graphs=%s",
+            "CUDA cleanup complete after %s cleared_graphs=%s",
+            what,
             cleared_graphs,
         )
     except Exception:
-        logger.debug("CUDA cleanup failed after batch error.", exc_info=True)
+        logger.debug("CUDA cleanup failed after %s.", what, exc_info=True)
 
 
 def _format_optional_float(value: float | None) -> str:

@@ -16,6 +16,14 @@ from omnivoice_triton.models.base_runner import BaseRunner
 logger = logging.getLogger(__name__)
 
 
+class CudaGraphCaptureError(RuntimeError):
+    """A CUDA Graph capture failed.
+
+    The process is not safe to keep serving afterwards: in production a failed capture
+    was followed seconds later by "device-side assert triggered" on every request.
+    """
+
+
 class _CUDAGraphForward:
     """Wraps OmniVoice.forward() with CUDA Graph capture and replay.
 
@@ -90,13 +98,23 @@ class _CUDAGraphForward:
 
         # Capture graph — all tensors are static buffers whose addresses
         # remain valid across replay calls.
+        # "thread_local": only this thread's unsafe calls can invalidate the capture.
+        # With the default "global" mode, ordinary CUDA work in any other thread (a
+        # voice prompt being encoded for /clone-prompts) aborted it. The API server also
+        # keeps all of its CUDA work on the batcher thread that captures; this guards
+        # against anything outside it.
         graph = torch.cuda.CUDAGraph()
-        with torch.cuda.graph(graph):
-            static_output = self._original_forward(
-                static_input_ids,
-                static_audio_mask,
-                **kwargs,
-            )
+        try:
+            with torch.cuda.graph(graph, capture_error_mode="thread_local"):
+                static_output = self._original_forward(
+                    static_input_ids,
+                    static_audio_mask,
+                    **kwargs,
+                )
+        except Exception as exc:
+            raise CudaGraphCaptureError(
+                f"CUDA Graph capture failed for shape {key}: {exc}"
+            ) from exc
 
         entry = {
             "graph": graph,

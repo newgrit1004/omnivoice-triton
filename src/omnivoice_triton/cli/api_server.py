@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import gc
 import io
 import logging
 import os
@@ -23,6 +24,7 @@ import soundfile as sf
 import torch
 import uvicorn
 from fastapi import FastAPI, File, Form, Header, HTTPException, UploadFile
+from fastapi.encoders import jsonable_encoder
 from fastapi.responses import JSONResponse, Response
 from omnivoice import OmniVoiceGenerationConfig
 from omnivoice.utils.lang_map import LANG_NAME_TO_ID, lang_display_name
@@ -38,6 +40,8 @@ from omnivoice_triton.serving import (
     WorkerCallbackConfig,
     WorkerLifecycleReporter,
     WorkerRuntimeState,
+    is_cuda_fault,
+    prompt_to_cpu,
 )
 from omnivoice_triton.serving.sentence_pauses import PAUSE_SECONDS, split_sentences
 
@@ -408,6 +412,26 @@ def _worker_draining_response() -> JSONResponse:
     )
 
 
+def _worker_unavailable_response(runtime: WorkerRuntimeState) -> JSONResponse:
+    """503 for work the worker will not take: draining, or its CUDA context failed."""
+    cuda_fault = runtime.cuda_fault
+    if cuda_fault is not None:
+        return JSONResponse(
+            status_code=503,
+            content={
+                "ok": False,
+                "error": "cuda_fault",
+                "detail": cuda_fault["reason"],
+            },
+        )
+    return _worker_draining_response()
+
+
+def _runtime_error_status(exc: RuntimeError) -> int:
+    """503 when the CUDA context failed (retry on another worker), otherwise 500."""
+    return 503 if is_cuda_fault(exc) else 500
+
+
 def _parse_env_nonnegative_float(name: str, default: float) -> float:
     raw = os.environ.get(name)
     if raw is None or not raw.strip():
@@ -548,7 +572,11 @@ def _cleanup_cuda_after_failure(
     model: Any | None = None,
     clear_cuda_graphs: bool = False,
 ) -> None:
-    """Best-effort cleanup for failed requests that may have touched CUDA."""
+    """Best-effort cleanup for failed requests that may have touched CUDA.
+
+    Call only on the batcher thread (inside GenerationBatcher.run_on_gpu_thread): from a
+    request thread it would race CUDA Graph capture and replay.
+    """
     cleared_graphs = False
     if clear_cuda_graphs and model is not None:
         forward = getattr(model, "forward", None)
@@ -576,6 +604,7 @@ def _cleanup_cuda_after_failure(
             exc_info=True,
         )
     try:
+        gc.collect()
         torch.cuda.empty_cache()
         if hasattr(torch.cuda, "ipc_collect"):
             torch.cuda.ipc_collect()
@@ -956,6 +985,14 @@ def create_app(
             max_size=token_estimate_cache_size
         )
         app.state.gpu_metrics_monitor = GPUMetricsMonitor(resolved_device)
+
+        def _handle_cuda_fault(reason: str) -> None:
+            # /health and /healthz turn 503, and Lingua hears "dead" right away.
+            app.state.worker_runtime.mark_cuda_fault(reason)
+            reporter = app.state.worker_lifecycle_reporter
+            if reporter is not None:
+                reporter.report_now()
+
         app.state.batcher = GenerationBatcher(
             model,
             collect_ms=batch_collect_ms,
@@ -965,6 +1002,7 @@ def create_app(
             max_batch_padding_ratio=max_batch_padding_ratio,
             batch_bucket_sizes=batch_bucket_sizes,
             gpu_metrics_monitor=app.state.gpu_metrics_monitor,
+            on_cuda_fault=_handle_cuda_fault,
         )
         requested_prewarm_batch_sizes = tuple(
             size for size in prewarm_clone_batch_sizes if size <= max_batch_requests
@@ -1092,8 +1130,15 @@ def create_app(
     app.state.worker_callback_config = worker_callback_config
     app.state.worker_lifecycle_reporter = None
 
+    def _on_gpu_thread(name: str, fn: Callable[[], Any]) -> Any:
+        """Run CUDA work for a request on the batcher thread (see GenerationBatcher)."""
+        batcher = app.state.batcher
+        if batcher is None:
+            raise HTTPException(503, detail="Batcher is not ready yet.")
+        return batcher.run_on_gpu_thread(fn, name=name)
+
     @app.get("/health")
-    def health() -> dict[str, Any]:
+    def health() -> Any:
         runner = app.state.runner
         model = getattr(runner, "model", None)
         graph_metrics: dict[str, Any] = {}
@@ -1119,8 +1164,10 @@ def create_app(
                 logger.exception("Failed to collect GPU metrics.")
         worker_config = app.state.worker_callback_config
         worker_runtime = app.state.worker_runtime.snapshot()
-        return {
-            "status": "ok",
+        cuda_fault = worker_runtime["cuda_fault"]
+        body = {
+            "status": "ok" if cuda_fault is None else "error",
+            "cuda_fault": cuda_fault,
             "model": app.state.model_checkpoint,
             "runner": app.state.runner_name,
             "device": app.state.device,
@@ -1189,12 +1236,29 @@ def create_app(
                 **worker_runtime,
             },
         }
+        if cuda_fault is not None:
+            # A failed CUDA context fails every request; tell health checks so.
+            return JSONResponse(status_code=503, content=jsonable_encoder(body))
+        return body
 
     @app.get("/healthz")
-    def healthz() -> dict[str, Any]:
+    def healthz() -> Any:
         runner = app.state.runner
         if runner is None or app.state.batcher is None:
             raise HTTPException(503, detail="Model is not ready yet.")
+        cuda_fault = app.state.worker_runtime.cuda_fault
+        if cuda_fault is not None:
+            return JSONResponse(
+                status_code=503,
+                content={
+                    "ok": False,
+                    "service": "omnivoice",
+                    "worker_type": "tts",
+                    "status": "dead",
+                    "error": "cuda_fault",
+                    "detail": cuda_fault["reason"],
+                },
+            )
         return {
             "ok": True,
             "service": "omnivoice",
@@ -1263,7 +1327,7 @@ def create_app(
             )
         request_counted = app.state.worker_runtime.begin_request()
         if not request_counted:
-            return _worker_draining_response()
+            return _worker_unavailable_response(app.state.worker_runtime)
 
         request_id = uuid4().hex[:12]
         started_at = _utc_now()
@@ -1275,18 +1339,22 @@ def create_app(
             if not ref_audio_bytes:
                 raise HTTPException(400, detail="ref_audio is empty.")
 
-            prompt = _create_voice_clone_prompt(
-                runner.model,
-                ref_audio_bytes=ref_audio_bytes,
-                ref_text=ref_text_value,
-                preprocess_prompt=preprocess_prompt,
-                asr_load_lock=app.state.asr_load_lock,
-                allow_lazy_asr=app.state.allow_lazy_asr,
+            prompt_id = _on_gpu_thread(
+                "clone_prompt_register",
+                lambda: prompt_store.register(
+                    _create_voice_clone_prompt(
+                        runner.model,
+                        ref_audio_bytes=ref_audio_bytes,
+                        ref_text=ref_text_value,
+                        preprocess_prompt=preprocess_prompt,
+                        asr_load_lock=app.state.asr_load_lock,
+                        allow_lazy_asr=app.state.allow_lazy_asr,
+                    )
+                ),
             )
-            prompt_id = prompt_store.register(prompt)
             finished_at = _utc_now()
             duration_ms = (time.perf_counter() - started_perf) * 1000.0
-            stored_prompt = prompt_store.get(prompt_id) or prompt
+            stored_prompt = prompt_store.get(prompt_id)
             ref_audio_tokens = getattr(stored_prompt, "ref_audio_tokens", None)
             prompt_audio_tokens = (
                 int(ref_audio_tokens.size(-1))
@@ -1310,7 +1378,7 @@ def create_app(
                 duration_ms,
                 prompt_audio_tokens if prompt_audio_tokens is not None else "-",
                 stored_device,
-                bool(getattr(prompt, "ref_text", None)),
+                bool(getattr(stored_prompt, "ref_text", None)),
             )
 
             return {
@@ -1326,26 +1394,15 @@ def create_app(
         except HTTPException:
             raise
         except ValueError as exc:
-            _cleanup_cuda_after_failure(
-                "clone_prompt_value_error",
-                model=getattr(runner, "model", None),
-            )
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except RuntimeError as exc:
             logger.exception("request_id=%s status=runtime_error", request_id)
-            _cleanup_cuda_after_failure(
-                "clone_prompt_runtime_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
-            )
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=_runtime_error_status(exc),
+                detail=str(exc),
+            ) from exc
         except Exception as exc:  # pragma: no cover - defensive server guard
             logger.exception("request_id=%s status=unexpected_error", request_id)
-            _cleanup_cuda_after_failure(
-                "clone_prompt_unexpected_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
-            )
             raise HTTPException(
                 status_code=500,
                 detail=f"{type(exc).__name__}: {exc}",
@@ -1366,13 +1423,18 @@ def create_app(
             raise HTTPException(503, detail="Clone prompt cache is not ready yet.")
 
         def _create_prompt() -> Any:
-            return _create_voice_clone_prompt(
-                runner.model,
-                ref_audio_bytes=ref_audio_bytes,
-                ref_text=ref_text_value,
-                preprocess_prompt=preprocess_prompt,
-                asr_load_lock=app.state.asr_load_lock,
-                allow_lazy_asr=app.state.allow_lazy_asr,
+            return _on_gpu_thread(
+                "clone_prompt_cache_warm",
+                lambda: prompt_to_cpu(
+                    _create_voice_clone_prompt(
+                        runner.model,
+                        ref_audio_bytes=ref_audio_bytes,
+                        ref_text=ref_text_value,
+                        preprocess_prompt=preprocess_prompt,
+                        asr_load_lock=app.state.asr_load_lock,
+                        allow_lazy_asr=app.state.allow_lazy_asr,
+                    )
+                ),
             )
 
         prompt_result = prompt_cache.get_or_create(
@@ -1453,7 +1515,7 @@ def create_app(
         ref_text_value = _normalize_text(ref_text)
         request_counted = app.state.worker_runtime.begin_request()
         if not request_counted:
-            return _worker_draining_response()
+            return _worker_unavailable_response(app.state.worker_runtime)
         release_request = True
 
         try:
@@ -1565,31 +1627,20 @@ def create_app(
         except HTTPException:
             raise
         except ValueError as exc:
-            _cleanup_cuda_after_failure(
-                "cache_warm_value_error",
-                model=getattr(runner, "model", None),
-            )
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except RuntimeError as exc:
             logger.exception(
                 "cache_warm request_id=%s status=runtime_error",
                 request_id,
             )
-            _cleanup_cuda_after_failure(
-                "cache_warm_runtime_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
-            )
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=_runtime_error_status(exc),
+                detail=str(exc),
+            ) from exc
         except Exception as exc:  # pragma: no cover - defensive server guard
             logger.exception(
                 "cache_warm request_id=%s status=unexpected_error",
                 request_id,
-            )
-            _cleanup_cuda_after_failure(
-                "cache_warm_unexpected_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
             )
             raise HTTPException(
                 status_code=500,
@@ -1747,7 +1798,7 @@ def create_app(
         response_encode_ms = 0.0
         request_counted = app.state.worker_runtime.begin_request()
         if not request_counted:
-            return _worker_draining_response()
+            return _worker_unavailable_response(app.state.worker_runtime)
 
         try:
             model = runner.model
@@ -1787,13 +1838,18 @@ def create_app(
                     prompt_cache = app.state.clone_prompt_cache
 
                     def _create_prompt() -> Any:
-                        return _create_voice_clone_prompt(
-                            model,
-                            ref_audio_bytes=ref_audio_bytes,
-                            ref_text=ref_text_value,
-                            preprocess_prompt=preprocess_prompt,
-                            asr_load_lock=app.state.asr_load_lock,
-                            allow_lazy_asr=app.state.allow_lazy_asr,
+                        return _on_gpu_thread(
+                            "clone_prompt_upload",
+                            lambda: prompt_to_cpu(
+                                _create_voice_clone_prompt(
+                                    model,
+                                    ref_audio_bytes=ref_audio_bytes,
+                                    ref_text=ref_text_value,
+                                    preprocess_prompt=preprocess_prompt,
+                                    asr_load_lock=app.state.asr_load_lock,
+                                    allow_lazy_asr=app.state.allow_lazy_asr,
+                                )
+                            ),
                         )
 
                     if prompt_cache is None:
@@ -2083,30 +2139,19 @@ def create_app(
                 media_type="audio/wav",
                 headers=headers,
             )
+        # A failed batch was cleaned up on the batcher thread; no CUDA calls here.
         except HTTPException:
             raise
         except ValueError as exc:
-            _cleanup_cuda_after_failure(
-                "generate_value_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
-            )
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except RuntimeError as exc:
             logger.exception("request_id=%s status=runtime_error", request_id)
-            _cleanup_cuda_after_failure(
-                "generate_runtime_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
-            )
-            raise HTTPException(status_code=500, detail=str(exc)) from exc
+            raise HTTPException(
+                status_code=_runtime_error_status(exc),
+                detail=str(exc),
+            ) from exc
         except Exception as exc:  # pragma: no cover - defensive server guard
             logger.exception("request_id=%s status=unexpected_error", request_id)
-            _cleanup_cuda_after_failure(
-                "generate_unexpected_error",
-                model=getattr(runner, "model", None),
-                clear_cuda_graphs=True,
-            )
             raise HTTPException(
                 status_code=500,
                 detail=f"{type(exc).__name__}: {exc}",
