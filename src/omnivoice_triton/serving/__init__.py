@@ -7,6 +7,7 @@ from omnivoice_triton.serving.batching import (
     GenerationBatcher,
     GenerationBatchKey,
     PendingGeneration,
+    QueueFullError,
     is_cuda_fault,
     prompt_to_cpu,
 )
@@ -26,6 +27,7 @@ __all__ = [
     "GenerationBatcher",
     "GPUMetricsMonitor",
     "PendingGeneration",
+    "QueueFullError",
     "WorkerCallbackConfig",
     "WorkerLifecycleReporter",
     "WorkerRuntimeState",

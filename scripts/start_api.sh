@@ -73,6 +73,14 @@ if [ -n "${MAX_BATCH_REQUESTS:-}" ]; then
   cmd+=(--max-batch-requests "$MAX_BATCH_REQUESTS")
 fi
 
+if [ -n "${MAX_PENDING_REQUESTS:-}" ]; then
+  cmd+=(--max-pending-requests "$MAX_PENDING_REQUESTS")
+fi
+
+if [ -n "${MAX_PENDING_GPU_TASKS:-}" ]; then
+  cmd+=(--max-pending-gpu-tasks "$MAX_PENDING_GPU_TASKS")
+fi
+
 if [ -n "${MAX_BATCH_TARGET_TOKENS:-}" ]; then
   cmd+=(--max-batch-target-tokens "$MAX_BATCH_TARGET_TOKENS")
 fi

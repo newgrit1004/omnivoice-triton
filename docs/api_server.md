@@ -186,9 +186,24 @@ Main runtime flags:
 - `--sage-attention`: enable SageAttention on `triton` or `hybrid`
 - `--batch-collect-ms`: micro-batch collection window
 - `--max-batch-requests`: max requests per merged batch
+- `--max-pending-requests`: prepared requests waiting behind the executing batch
+  (default 64)
+- `--max-pending-gpu-tasks`: reference/cache tasks waiting for the GPU (default 16)
 - `--max-batch-target-tokens`: cap on estimated generated audio tokens
 - `--max-batch-conditioning-tokens`: cap on estimated prompt/context tokens
 - `--max-batch-padding-ratio`: guardrail against inefficient padding-heavy batches
+
+When a pending queue is full, the request returns HTTP 429. This is overload
+protection, not a latency or successful-concurrency guarantee. `/health` exposes
+`batcher_queue` with both pending counts, their limits, and the oldest prepared
+request's wait time. These counts exclude executing work and requests waiting for
+a synchronous HTTP handler thread. Reference encoding uses `torch.inference_mode()`
+inside the GPU owner thread; PyTorch gradient modes are local to each thread.
+
+The launcher accepts `MAX_PENDING_REQUESTS` and `MAX_PENDING_GPU_TASKS` as well as
+the existing batching environment settings. `/generate` still returns a complete
+WAV. Sentence splitting generates each sentence and joins every result before
+returning; it does not send partial audio to the client.
 - `--clone-prompt-cache-size`: number of prepared clone prompts to cache
 - `--registered-clone-prompt-store-size`: number of registered prompt IDs to keep
 - `--token-estimate-cache-size`: LRU size for tokenizer-based batch estimates

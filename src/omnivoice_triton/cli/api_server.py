@@ -37,6 +37,7 @@ from omnivoice_triton.serving import (
     GenerationBatchKey,
     GPUMetricsMonitor,
     PendingGeneration,
+    QueueFullError,
     WorkerCallbackConfig,
     WorkerLifecycleReporter,
     WorkerRuntimeState,
@@ -276,6 +277,18 @@ def build_parser() -> argparse.ArgumentParser:
         help="Maximum number of requests to merge into one model.generate() call.",
     )
     parser.add_argument(
+        "--max-pending-requests",
+        type=int,
+        default=64,
+        help="Maximum prepared requests waiting for a GPU batch (HTTP 429 when full).",
+    )
+    parser.add_argument(
+        "--max-pending-gpu-tasks",
+        type=int,
+        default=16,
+        help="Maximum reference/cache tasks waiting for the GPU (HTTP 429 when full).",
+    )
+    parser.add_argument(
         "--max-batch-target-tokens",
         type=int,
         default=DEFAULT_MAX_BATCH_TARGET_TOKENS,
@@ -428,7 +441,9 @@ def _worker_unavailable_response(runtime: WorkerRuntimeState) -> JSONResponse:
 
 
 def _runtime_error_status(exc: RuntimeError) -> int:
-    """503 when the CUDA context failed (retry on another worker), otherwise 500."""
+    """Distinguish overload, a failed CUDA context, and other runtime failures."""
+    if isinstance(exc, QueueFullError):
+        return 429
     return 503 if is_cuda_fault(exc) else 500
 
 
@@ -783,6 +798,7 @@ def _build_batch_key(
     )
 
 
+@torch.inference_mode()
 def _create_voice_clone_prompt(
     model: Any,
     *,
@@ -921,6 +937,8 @@ def create_app(
     save_dir: str | None = None,
     batch_collect_ms: float = DEFAULT_BATCH_COLLECT_MS,
     max_batch_requests: int = DEFAULT_MAX_BATCH_REQUESTS,
+    max_pending_requests: int = 64,
+    max_pending_gpu_tasks: int = 16,
     max_batch_target_tokens: int = DEFAULT_MAX_BATCH_TARGET_TOKENS,
     max_batch_conditioning_tokens: int = DEFAULT_MAX_BATCH_CONDITIONING_TOKENS,
     max_batch_padding_ratio: float = DEFAULT_MAX_BATCH_PADDING_RATIO,
@@ -997,6 +1015,8 @@ def create_app(
             model,
             collect_ms=batch_collect_ms,
             max_batch_requests=max_batch_requests,
+            max_pending_requests=max_pending_requests,
+            max_pending_gpu_tasks=max_pending_gpu_tasks,
             max_batch_target_tokens=max_batch_target_tokens,
             max_batch_conditioning_tokens=max_batch_conditioning_tokens,
             max_batch_padding_ratio=max_batch_padding_ratio,
@@ -1183,6 +1203,7 @@ def create_app(
             "max_cuda_graphs": int(app.state.max_cuda_graphs),
             "batch_collect_ms": app.state.batch_collect_ms,
             "max_batch_requests": app.state.max_batch_requests,
+            "batcher_queue": app.state.batcher.queue_snapshot(),
             "max_batch_target_tokens": app.state.max_batch_target_tokens,
             "max_batch_conditioning_tokens": app.state.max_batch_conditioning_tokens,
             "max_batch_padding_ratio": app.state.max_batch_padding_ratio,
@@ -2206,6 +2227,8 @@ def main(argv: list[str] | None = None) -> None:
         save_dir=args.save_dir,
         batch_collect_ms=args.batch_collect_ms,
         max_batch_requests=args.max_batch_requests,
+        max_pending_requests=args.max_pending_requests,
+        max_pending_gpu_tasks=args.max_pending_gpu_tasks,
         max_batch_target_tokens=args.max_batch_target_tokens,
         max_batch_conditioning_tokens=args.max_batch_conditioning_tokens,
         max_batch_padding_ratio=args.max_batch_padding_ratio,

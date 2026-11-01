@@ -6,6 +6,7 @@ import logging
 import threading
 import time
 import weakref
+from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 
 import numpy as np
@@ -19,6 +20,7 @@ from omnivoice_triton.serving import (
     GenerationBatcher,
     GenerationBatchKey,
     PendingGeneration,
+    QueueFullError,
     is_cuda_fault,
 )
 
@@ -76,6 +78,60 @@ def _pending_generation(request_id: str) -> PendingGeneration:
         ),
         generation_config=OmniVoiceGenerationConfig(),
     )
+
+
+@pytest.mark.parametrize("kind", ["generation", "gpu_task"])
+def test_queue_limit_rejects_excess_and_worker_recovers(kind: str) -> None:
+    """Excess work is rejected without discarding admitted work or poisoning CUDA."""
+    entered, release = threading.Event(), threading.Event()
+
+    def blocker():
+        entered.set()
+        assert release.wait(5)
+
+    model = SimpleNamespace(
+        generate=lambda **kw: [np.zeros(10, dtype=np.float32) for _ in kw["text"]]
+    )
+    batcher = GenerationBatcher(
+        model, collect_ms=0, max_pending_requests=1, max_pending_gpu_tasks=1
+    )
+    try:
+        with ThreadPoolExecutor(max_workers=2) as pool:
+            running = pool.submit(batcher.run_on_gpu_thread, blocker, name="blocker")
+            assert entered.wait(2)
+
+            def enqueue():
+                if kind == "generation":
+                    return batcher.submit(_pending_generation("admitted"))
+                return batcher.run_on_gpu_thread(lambda: 42, name="admitted")
+
+            admitted = pool.submit(enqueue)
+            try:
+                with batcher._condition:
+                    assert batcher._condition.wait_for(
+                        lambda: bool(
+                            batcher._pending if kind == "generation" else batcher._tasks
+                        ),
+                        timeout=2,
+                    )
+                snapshot = batcher.queue_snapshot()
+                key = (
+                    "pending_requests" if kind == "generation" else "pending_gpu_tasks"
+                )
+                assert snapshot[key] == 1
+                with pytest.raises(QueueFullError):
+                    enqueue()
+                assert batcher.cuda_fault is None
+            finally:
+                release.set()
+            running.result(timeout=2)
+            admitted.result(timeout=2)
+        assert batcher.run_on_gpu_thread(lambda: "healthy", name="after") == "healthy"
+        assert batcher.queue_snapshot()["pending_requests"] == 0
+        assert batcher.queue_snapshot()["pending_gpu_tasks"] == 0
+    finally:
+        release.set()
+        batcher.close()
 
 
 def test_gpu_tasks_and_batches_take_turns() -> None:

@@ -28,6 +28,10 @@ class CudaFaultError(RuntimeError):
     """The process's CUDA context failed; the worker refuses work until restarted."""
 
 
+class QueueFullError(RuntimeError):
+    """The bounded GPU queue cannot accept more work right now."""
+
+
 def _exception_chain(exc: BaseException) -> Iterator[BaseException]:
     seen: set[int] = set()
     pending: list[BaseException] = [exc]
@@ -252,6 +256,8 @@ class GenerationBatcher:
         batch_bucket_sizes: tuple[int, ...] | None = None,
         gpu_metrics_monitor: GPUMetricsMonitor | None = None,
         on_cuda_fault: Callable[[str], None] | None = None,
+        max_pending_requests: int = 64,
+        max_pending_gpu_tasks: int = 16,
     ) -> None:
         self._model = model
         self.collect_ms = max(0.0, collect_ms)
@@ -264,6 +270,8 @@ class GenerationBatcher:
         )
         self._gpu_metrics_monitor = gpu_metrics_monitor
         self._on_cuda_fault = on_cuda_fault
+        self.max_pending_requests = max(1, max_pending_requests)
+        self.max_pending_gpu_tasks = max(1, max_pending_gpu_tasks)
 
         self._condition = threading.Condition()
         self._pending: deque[PendingGeneration] = deque()
@@ -288,6 +296,10 @@ class GenerationBatcher:
         """Queue a request and block until its merged batch finishes."""
         with self._condition:
             self._raise_if_unavailable_locked()
+            if len(self._pending) >= self.max_pending_requests:
+                raise QueueFullError(
+                    "Generation queue is full; retry on available capacity."
+                )
             self._pending.append(request)
             self._condition.notify()
 
@@ -300,10 +312,26 @@ class GenerationBatcher:
         task = _GpuTask(name=name, fn=fn)
         with self._condition:
             self._raise_if_unavailable_locked()
+            if len(self._tasks) >= self.max_pending_gpu_tasks:
+                raise QueueFullError("GPU preparation queue is full; retry later.")
             self._tasks.append(task)
             self._condition.notify()
 
         return task.future.result()
+
+    def queue_snapshot(self) -> dict[str, int | float]:
+        """Actual pending work, excluding the task or batch already executing."""
+        with self._condition:
+            return {
+                "pending_requests": len(self._pending),
+                "pending_gpu_tasks": len(self._tasks),
+                "max_pending_requests": self.max_pending_requests,
+                "max_pending_gpu_tasks": self.max_pending_gpu_tasks,
+                "oldest_pending_ms": (
+                    max(0.0, time.perf_counter() - self._pending[0].enqueued_at) * 1000
+                    if self._pending else 0.0
+                ),
+            }
 
     def close(self) -> None:
         """Stop the worker and fail any queued requests."""

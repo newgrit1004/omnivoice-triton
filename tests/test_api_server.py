@@ -17,7 +17,7 @@ import torch
 from fastapi.testclient import TestClient
 
 from omnivoice_triton.cli.api_server import create_app
-from omnivoice_triton.serving import WorkerLifecycleReporter
+from omnivoice_triton.serving import QueueFullError, WorkerLifecycleReporter
 
 
 class _FakeTokenizer:
@@ -71,6 +71,7 @@ class _FakeModel:
         self.calls: list[dict[str, Any]] = []
         self.prompt_calls: list[dict[str, Any]] = []
         self.prompt_threads: list[str] = []
+        self.prompt_grad_modes: list[tuple[bool, bool]] = []
         self.prompt_error: BaseException | None = None
         self.generate_error: BaseException | None = None
         self.forward = _FakeGraphForward()
@@ -122,6 +123,9 @@ class _FakeModel:
         }
         self.prompt_calls.append(call)
         self.prompt_threads.append(threading.current_thread().name)
+        self.prompt_grad_modes.append(
+            (torch.is_grad_enabled(), torch.is_inference_mode_enabled())
+        )
         if self.prompt_error is not None:
             raise self.prompt_error
         return SimpleNamespace(
@@ -1170,6 +1174,25 @@ def test_clone_prompt_encoding_runs_on_the_batcher_thread(tmp_path: Path) -> Non
     assert warm.status_code == 200
     assert upload.status_code == 200
     assert created[0].model.prompt_threads == ["omnivoice-batcher"] * 3
+    assert created[0].model.prompt_grad_modes == [(False, True)] * 3
+
+
+def test_generate_queue_overload_is_429_and_health_remains_ok(
+    tmp_path: Path, monkeypatch
+) -> None:
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+    with TestClient(app) as client:
+        def full(request):
+            raise QueueFullError("Generation queue is full.")
+
+        monkeypatch.setattr(app.state.batcher, "submit", full)
+        response = client.post("/generate", **_design_request())
+        assert response.status_code == 429
+        health = client.get("/health")
+        assert health.status_code == 200
+        assert health.json()["batcher_queue"]["pending_requests"] == 0
+        assert health.json()["worker"]["active_requests"] == 0
 
 
 def test_cuda_fault_in_batch_marks_worker_dead(tmp_path: Path) -> None:
