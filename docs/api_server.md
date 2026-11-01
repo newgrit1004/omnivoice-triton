@@ -192,6 +192,12 @@ Main runtime flags:
 - `--max-batch-target-tokens`: cap on estimated generated audio tokens
 - `--max-batch-conditioning-tokens`: cap on estimated prompt/context tokens
 - `--max-batch-padding-ratio`: guardrail against inefficient padding-heavy batches
+- `--clone-prompt-cache-size`: number of prepared clone prompts to cache
+- `--registered-clone-prompt-store-size`: number of registered prompt IDs to keep
+- `--token-estimate-cache-size`: LRU size for tokenizer-based batch estimates
+- `--decode-postprocess-workers`: CPU worker threads for audio postprocessing
+- `--max-cuda-graphs`: maximum CUDA Graph shapes retained by `faster` and
+  `hybrid`; default `8`, and `0` disables graph caching
 
 When a pending queue is full, the request returns HTTP 429. This is overload
 protection, not a latency or successful-concurrency guarantee. `/health` exposes
@@ -204,12 +210,6 @@ The launcher accepts `MAX_PENDING_REQUESTS` and `MAX_PENDING_GPU_TASKS` as well 
 the existing batching environment settings. `/generate` still returns a complete
 WAV. Sentence splitting generates each sentence and joins every result before
 returning; it does not send partial audio to the client.
-- `--clone-prompt-cache-size`: number of prepared clone prompts to cache
-- `--registered-clone-prompt-store-size`: number of registered prompt IDs to keep
-- `--token-estimate-cache-size`: LRU size for tokenizer-based batch estimates
-- `--decode-postprocess-workers`: CPU worker threads for audio postprocessing
-- `--max-cuda-graphs`: maximum CUDA Graph shapes retained by `faster` and
-  `hybrid`; default `8`, and `0` disables graph caching
 
 Typical startup:
 
