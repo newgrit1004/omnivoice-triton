@@ -42,6 +42,26 @@ separately; a loopback TTS result is not end-to-end call latency.
 
 ## What concurrency work already exists
 
+### Implementation status as of 2026-11-01
+
+The full scaling plan is **not implemented or qualified**. The deployed code is
+the safety/queue foundation. A request accepted into a queue is not evidence of
+low-latency GPU capacity.
+
+| Deliverable | Implementation status | Testing status |
+| --- | --- | --- |
+| Single GPU owner, reference inference mode, fatal CUDA health reporting | Deployed on the existing RTX 3060 | Mocked regression tests and real GPU pilot |
+| Bounds on prepared GPU queues, pending metrics, overload response | Deployed on the RTX 3060 | Queue rejection/recovery and HTTP 429 tested with mock model; bounded live load tested |
+| Complete WAV and sequential sentence rejoining | Existing behavior retained | Single, burst and staggered GPU pilots; word checks reported separately |
+| Async worker and gateway request waiting | Planned | Not implemented or tested |
+| End-to-end deadlines, disconnect cancellation and interactive scheduling | Planned | Not implemented or tested |
+| Atomic fleet reservations and durable prompt cache | Planned | Not implemented or tested |
+| Qualified 100/1,000/5,000 capacity with warm regional workers | Planned | No qualification of the new implementation at those sizes |
+| Word accuracy and audio-quality gate | Offline evaluation harness added in the Lingua workspace | 24 retained and 37 new outputs screened; six new flags remain after two ASR models; gate is review required |
+
+Historical tests on the other GPU rentals remain historical; they are not tests
+of the new async/fleet architecture. MuseTalk remains a separate capacity limit.
+
 | Area | Implementation found | Limit for low-latency calls |
 | --- | --- | --- |
 | HTTP microbatching | `GenerationBatcher`, one background thread, compatible requests merged into `model.generate(list)` | One merged batch runs at a time; this is not continuous token scheduling |
@@ -130,8 +150,30 @@ There were 436 loopback and 22 public real-model generation requests including
 warmups, six successful reference registrations, and one operator validation
 error before inference. The loopback outputs passed finite/nonempty/amplitude
 checks; public outputs passed WAV structure checks. Speech accuracy and speaker
-similarity were not evaluated, and these small phase samples do not certify
+similarity had not been evaluated at the time of that initial latency pilot;
+these small phase samples do not certify
 production tail latency. Sixty-one mocked-model regression tests also passed.
+
+A subsequent quality follow-up on this same RTX 3060 screened 24 saved before/after
+clips and generated 37 new English/Spanish/Arabic cloned responses, retaining
+every WAV. Local Whisper recovered exact normalized words in 30/37 new clips;
+one further flag was exact under a second recognizer, while six remained
+flagged. The quality gate returns **review required**, not a blanket pass. Eight
+exploratory 16/32-step rerenders also left the long Arabic text flagged. These
+results do not establish whether individual spelling/pronunciation differences
+come from TTS or ASR, nor whether concurrency caused them. No new model/profile
+was deployed. See the Lingua companion
+`docs/benchmarks/omnivoice-audio-quality-rtx-3060-2026-11-01.md` and retained
+transcripts/audio for details.
+
+The installed local Whisper v3 models cover 100 language codes, but only three
+were tested here. Coverage above 100 needs another backend. The official Meta
+Omnilingual ASR project reports 1,600+ supported languages and local inference;
+it is a source-reviewed candidate, not an installed or qualified component of
+this run. Match language/script codes and validate accuracy before using it as
+a judge. Never label untested languages as quality-qualified.
+[Official language list](https://github.com/openai/whisper/blob/main/whisper/tokenizer.py),
+[Omnilingual ASR project](https://github.com/facebookresearch/omnilingual-asr).
 
 The short fixture can produce a complete WAV below 500 ms at low load. Cached
 clone generation is slower than voice design. Ten-request bursts and the longer
@@ -286,6 +328,20 @@ replicas alone cannot satisfy the deadline: the service-time floor must fall fir
   >=99.9% valid completed responses, no lexical omissions beyond the baseline
   tolerance, no growing queue or memory trend, and a 30–60 minute sustained run
   plus worker-loss recovery. These are proposed gates, not measured results.
+- Save **every** output WAV under a unique request ID, including every concurrent
+  batch member. Transcribe blindly without supplying expected text to the
+  recognizer, then align normalized words and retain substitutions, deletions,
+  insertions and transcripts. Flag every mismatch; use a second recognizer or
+  listening review to resolve ASR ambiguity. Do not silently normalize lexical
+  errors away or treat HTTP/WAV validity as speech accuracy. Keep reference
+  controls and before/after profiles. Count only quality-qualified responses
+  when deriving GPU capacity. Keep offline transcription outside the latency
+  measurement; do not add it to every production voice turn.
+- The internal `gpt-transcribe` tool was not exposed in this session. A local
+  offline Whisper fallback was used with zero paid transcription API calls;
+  it must not be labeled as GPT transcription. Transcripts alone do not certify
+  naturalness, pronunciation or speaker similarity. Pending flags block a
+  performance-profile quality pass.
 - Keep the existing 4070 Ti failure-parity findings separate: short Arabic
   silence/postprocessing failures persisted in upstream and optimized paths.
   Fast HTTP 200 with silent audio is not successful TTS; bound retries inside
