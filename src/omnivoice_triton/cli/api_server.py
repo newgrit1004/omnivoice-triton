@@ -1444,9 +1444,17 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except RuntimeError as exc:
-            logger.exception("request_id=%s status=runtime_error", request_id)
+            status_code = _runtime_error_status(exc)
+            if status_code == 429:
+                # Queue saturation is normal backpressure, not an inference fault.
+                # Tracebacks for thousands of rejected arrivals block the event loop.
+                logger.info(
+                    "request_id=%s status=overloaded reason=%s", request_id, exc
+                )
+            else:
+                logger.exception("request_id=%s status=runtime_error", request_id)
             raise HTTPException(
-                status_code=_runtime_error_status(exc),
+                status_code=status_code,
                 detail=str(exc),
             ) from exc
         except Exception as exc:  # pragma: no cover - defensive server guard
@@ -2225,9 +2233,17 @@ def create_app(
         except ValueError as exc:
             raise HTTPException(status_code=400, detail=str(exc)) from exc
         except RuntimeError as exc:
-            logger.exception("request_id=%s status=runtime_error", request_id)
+            status_code = _runtime_error_status(exc)
+            if status_code == 429:
+                # Queue saturation is normal backpressure, not an inference fault.
+                # Tracebacks for thousands of rejected arrivals block the event loop.
+                logger.info(
+                    "request_id=%s status=overloaded reason=%s", request_id, exc
+                )
+            else:
+                logger.exception("request_id=%s status=runtime_error", request_id)
             raise HTTPException(
-                status_code=_runtime_error_status(exc),
+                status_code=status_code,
                 detail=str(exc),
             ) from exc
         except Exception as exc:  # pragma: no cover - defensive server guard
