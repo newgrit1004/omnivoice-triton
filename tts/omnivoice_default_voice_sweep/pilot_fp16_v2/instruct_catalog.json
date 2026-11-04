@@ -1,0 +1,190 @@
+{
+  "generated_at": "2026-06-16T03:15:10.599892+00:00",
+  "source_notes": [
+    "Official tags were copied from the installed OmniVoice Gradio demo and voice_design utility.",
+    "OmniVoice 0.1.4 validates instruct as controlled tags, not open-ended prose.",
+    "Exploratory personas keep tutor/persona wording in metadata only; generated instruct strings stay valid.",
+    "Deep voice experiments should start with low pitch and very low pitch."
+  ],
+  "official_tags": {
+    "gender": [
+      "male",
+      "female"
+    ],
+    "age": [
+      "child",
+      "teenager",
+      "young adult",
+      "middle-aged",
+      "elderly"
+    ],
+    "pitch": [
+      "very low pitch",
+      "low pitch",
+      "moderate pitch",
+      "high pitch",
+      "very high pitch"
+    ],
+    "style": [
+      "whisper"
+    ],
+    "english_accent": [
+      "american accent",
+      "british accent",
+      "australian accent",
+      "chinese accent",
+      "canadian accent",
+      "indian accent",
+      "korean accent",
+      "portuguese accent",
+      "russian accent",
+      "japanese accent"
+    ],
+    "chinese_dialect": [
+      "河南话",
+      "陕西话",
+      "四川话",
+      "贵州话",
+      "云南话",
+      "桂林话",
+      "济南话",
+      "石家庄话",
+      "甘肃话",
+      "宁夏话",
+      "青岛话",
+      "东北话"
+    ]
+  },
+  "profiles": [
+    {
+      "label": "auto_default",
+      "instruct": null,
+      "source": "default",
+      "gender": null,
+      "age": null,
+      "pitch": null,
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": "No instruct; OmniVoice default."
+    },
+    {
+      "label": "female_young_high",
+      "instruct": "female, young adult, high pitch",
+      "source": "official",
+      "gender": "female",
+      "age": "young adult",
+      "pitch": "high pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": ""
+    },
+    {
+      "label": "female_young_moderate",
+      "instruct": "female, young adult, moderate pitch",
+      "source": "official",
+      "gender": "female",
+      "age": "young adult",
+      "pitch": "moderate pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": ""
+    },
+    {
+      "label": "male_middle_low",
+      "instruct": "male, middle-aged, low pitch",
+      "source": "official",
+      "gender": "male",
+      "age": "middle-aged",
+      "pitch": "low pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": "Deep voice candidate."
+    },
+    {
+      "label": "male_middle_very_low",
+      "instruct": "male, middle-aged, very low pitch",
+      "source": "official",
+      "gender": "male",
+      "age": "middle-aged",
+      "pitch": "very low pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": "Deepest official pitch tag."
+    },
+    {
+      "label": "female_whisper",
+      "instruct": "female, young adult, moderate pitch, whisper",
+      "source": "official",
+      "gender": "female",
+      "age": "young adult",
+      "pitch": "moderate pitch",
+      "accent": null,
+      "dialect": null,
+      "style": "whisper",
+      "persona": null,
+      "notes": ""
+    },
+    {
+      "label": "warm_trusting_tutor",
+      "instruct": "female, young adult, moderate pitch",
+      "source": "exploratory",
+      "gender": "female",
+      "age": "young adult",
+      "pitch": "moderate pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": "warm and trusting",
+      "notes": "Persona label inspired by Gemini Despina; OmniVoice instruct only accepts official tags."
+    },
+    {
+      "label": "thoughtful_calm_tutor",
+      "instruct": "female, middle-aged, low pitch",
+      "source": "exploratory",
+      "gender": "female",
+      "age": "middle-aged",
+      "pitch": "low pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": "thoughtful and calm",
+      "notes": "Persona label inspired by Gemini Aoede; OmniVoice instruct only accepts official tags."
+    },
+    {
+      "label": "calm_reassuring_deep",
+      "instruct": "male, middle-aged, low pitch",
+      "source": "exploratory",
+      "gender": "male",
+      "age": "middle-aged",
+      "pitch": "low pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": "calm and reassuring",
+      "notes": "Gemini Charon-like persona label plus deep voice tag."
+    },
+    {
+      "label": "clear_helpful_deep",
+      "instruct": "male, middle-aged, very low pitch",
+      "source": "exploratory",
+      "gender": "male",
+      "age": "middle-aged",
+      "pitch": "very low pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": "clear and helpful",
+      "notes": "Persona label inspired by Gemini Fenrir; OmniVoice instruct only accepts official tags."
+    }
+  ]
+}

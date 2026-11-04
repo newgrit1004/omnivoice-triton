@@ -1,0 +1,540 @@
+{
+  "version": 1,
+  "generated_at": "2026-06-16T03:15:02.949382+00:00",
+  "dry_run": true,
+  "config": {
+    "runner": "hybrid",
+    "model": "k2-fsa/OmniVoice",
+    "dtype": "fp16",
+    "device": "cuda",
+    "languages": [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ar",
+      "ur"
+    ],
+    "profile_set": "pilot",
+    "num_steps": [
+      16
+    ],
+    "guidance_scale": 2.0,
+    "class_temperature": 0.0,
+    "speed": null,
+    "duration": null,
+    "include_gemini_clones": true,
+    "gemini_voices": [
+      "Aoede",
+      "Despina",
+      "Charon",
+      "Fenrir"
+    ],
+    "seed": 42
+  },
+  "planned": {
+    "design_samples": 180,
+    "gemini_clone_references": 19,
+    "design_preview": [
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "auto_default",
+        "num_step": 16,
+        "instruct": null
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_high",
+        "num_step": 16,
+        "instruct": "female, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_moderate",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middle_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middle_very_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_whisper",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch, whisper"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "warm_trusting_tutor",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "thoughtful_calm_tutor",
+        "num_step": 16,
+        "instruct": "female, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "calm_reassuring_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "clear_helpful_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "auto_default",
+        "num_step": 16,
+        "instruct": null
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "female_young_high",
+        "num_step": 16,
+        "instruct": "female, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "female_young_moderate",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "male_middle_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "male_middle_very_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "female_whisper",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch, whisper"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "warm_trusting_tutor",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "thoughtful_calm_tutor",
+        "num_step": 16,
+        "instruct": "female, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "calm_reassuring_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "pronunciation",
+        "profile": "clear_helpful_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "auto_default",
+        "num_step": 16,
+        "instruct": null
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "female_young_high",
+        "num_step": 16,
+        "instruct": "female, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "female_young_moderate",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "male_middle_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "male_middle_very_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "female_whisper",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch, whisper"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "warm_trusting_tutor",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "thoughtful_calm_tutor",
+        "num_step": 16,
+        "instruct": "female, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "calm_reassuring_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "mixed_tutor",
+        "profile": "clear_helpful_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "auto_default",
+        "num_step": 16,
+        "instruct": null
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "female_young_high",
+        "num_step": 16,
+        "instruct": "female, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "female_young_moderate",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "male_middle_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "male_middle_very_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "female_whisper",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch, whisper"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "warm_trusting_tutor",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "thoughtful_calm_tutor",
+        "num_step": 16,
+        "instruct": "female, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "calm_reassuring_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "baseline",
+        "profile": "clear_helpful_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "auto_default",
+        "num_step": 16,
+        "instruct": null
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "female_young_high",
+        "num_step": 16,
+        "instruct": "female, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "female_young_moderate",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "male_middle_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "male_middle_very_low",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "female_whisper",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch, whisper"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "warm_trusting_tutor",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "thoughtful_calm_tutor",
+        "num_step": 16,
+        "instruct": "female, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "calm_reassuring_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "es",
+        "text_case": "pronunciation",
+        "profile": "clear_helpful_deep",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      }
+    ],
+    "gemini_clone_preview": [
+      {
+        "lang_code": "ar",
+        "voice_name": "Despina",
+        "reference_audio": "tts/gemini_tts_clone_samples/ar/ar_arabic_despina.wav"
+      },
+      {
+        "lang_code": "ar",
+        "voice_name": "Aoede",
+        "reference_audio": "tts/gemini_tts_clone_samples/ar/ar_arabic_aoede.wav"
+      },
+      {
+        "lang_code": "ar",
+        "voice_name": "Charon",
+        "reference_audio": "tts/gemini_tts_clone_samples/ar/ar_arabic_charon.wav"
+      },
+      {
+        "lang_code": "ar",
+        "voice_name": "Fenrir",
+        "reference_audio": "tts/gemini_tts_clone_samples/ar/ar_arabic_fenrir.wav"
+      },
+      {
+        "lang_code": "de",
+        "voice_name": "Despina",
+        "reference_audio": "tts/gemini_tts_clone_samples/de/de_german_despina.wav"
+      },
+      {
+        "lang_code": "de",
+        "voice_name": "Aoede",
+        "reference_audio": "tts/gemini_tts_clone_samples/de/de_german_aoede.wav"
+      },
+      {
+        "lang_code": "de",
+        "voice_name": "Charon",
+        "reference_audio": "tts/gemini_tts_clone_samples/de/de_german_charon.wav"
+      },
+      {
+        "lang_code": "de",
+        "voice_name": "Fenrir",
+        "reference_audio": "tts/gemini_tts_clone_samples/de/de_german_fenrir.wav"
+      },
+      {
+        "lang_code": "en",
+        "voice_name": "Despina",
+        "reference_audio": "tts/gemini_tts_clone_samples/en/en_english_despina.wav"
+      },
+      {
+        "lang_code": "en",
+        "voice_name": "Aoede",
+        "reference_audio": "tts/gemini_tts_clone_samples/en/en_english_aoede.wav"
+      },
+      {
+        "lang_code": "en",
+        "voice_name": "Charon",
+        "reference_audio": "tts/gemini_tts_clone_samples/en/en_english_charon.wav"
+      },
+      {
+        "lang_code": "en",
+        "voice_name": "Fenrir",
+        "reference_audio": "tts/gemini_tts_clone_samples/en/en_english_fenrir.wav"
+      },
+      {
+        "lang_code": "es",
+        "voice_name": "Despina",
+        "reference_audio": "tts/gemini_tts_clone_samples/es/es_spanish_despina.wav"
+      },
+      {
+        "lang_code": "es",
+        "voice_name": "Aoede",
+        "reference_audio": "tts/gemini_tts_clone_samples/es/es_spanish_aoede.wav"
+      },
+      {
+        "lang_code": "es",
+        "voice_name": "Charon",
+        "reference_audio": "tts/gemini_tts_clone_samples/es/es_spanish_charon.wav"
+      },
+      {
+        "lang_code": "es",
+        "voice_name": "Fenrir",
+        "reference_audio": "tts/gemini_tts_clone_samples/es/es_spanish_fenrir.wav"
+      },
+      {
+        "lang_code": "fr",
+        "voice_name": "Despina",
+        "reference_audio": "tts/gemini_tts_clone_samples/fr/fr_french_despina.wav"
+      },
+      {
+        "lang_code": "fr",
+        "voice_name": "Aoede",
+        "reference_audio": "tts/gemini_tts_clone_samples/fr/fr_french_aoede.wav"
+      },
+      {
+        "lang_code": "fr",
+        "voice_name": "Charon",
+        "reference_audio": "tts/gemini_tts_clone_samples/fr/fr_french_charon.wav"
+      }
+    ]
+  },
+  "samples": [],
+  "errors": []
+}

@@ -1,0 +1,26 @@
+[
+  {
+    "id": "control-en",
+    "path": "../bench/inputs/references/en.wav",
+    "sha256": "d0adc9563e1c71781c87d163b80e9fa27859529ba9b5c7bf28a88ee6ae641e66",
+    "language": "en",
+    "expected": "I usually enjoy taking a long walk through the park during the afternoon to clear my mind, feel the fresh breeze, and watch the sun slowly set behind the tall trees in the distance.",
+    "text": "I usually enjoy taking a long walk through the park during the afternoon to clear my mind, feel the fresh breeze, and watch the sun slowly set behind the tall trees in the distance."
+  },
+  {
+    "id": "control-ar",
+    "path": "../bench/inputs/references/ar.wav",
+    "sha256": "dfb87da4364e14ed0e2117944eeaf6a425975670cbd6df874c9c5aec25e5c933",
+    "language": "ar",
+    "expected": "في هذا الصباح الجميل، قررت أن أخرج للتنزه في الحديقة الواسعة القريبة من منزلي وأستمتع بنسمات الهواء العليل وصوت العصافير المغردة فوق غصون الأشجار الخضراء.",
+    "text": "في هذا الصباح الجميل، قررت أن أخرج للتنزه في الحديقة الواسعة القريبة من منزلي وأستمتع بنسمات الهواء العليل وصوت العصافير المغردة فوق غصون الأشجار الخضراء."
+  },
+  {
+    "id": "control-es",
+    "path": "../bench/inputs/references/es.wav",
+    "sha256": "4206e6da660b66548d8a185ca36f86f58830edf2e1e143f0b718180b68d0ce36",
+    "language": "es",
+    "expected": "Espero que hoy sea un día muy tranquilo y podamos disfrutar de una buena comida con toda la familia en el jardín de casa mientras compartimos historias divertidas bajo la sombra.",
+    "text": "Espero que hoy sea un día muy tranquilo y podamos disfrutar de una buena comida con toda la familia en el jardín de casa mientras compartimos historias divertidas bajo la sombra."
+  }
+]

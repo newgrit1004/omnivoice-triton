@@ -1,0 +1,36 @@
+HTTP/1.1 200 OK
+date: Wed, 13 May 2026 00:03:41 GMT
+server: uvicorn
+content-disposition: inline; filename="omnivoice.wav"
+x-omnivoice-request-id: 63c833b8bedd
+x-omnivoice-started-at: 2026-05-13T00:03:42.498230Z
+x-omnivoice-finished-at: 2026-05-13T00:03:43.880823Z
+x-omnivoice-latency-ms: 1382.59
+x-omnivoice-audio-duration-s: 7.870
+x-omnivoice-runner: hybrid
+x-omnivoice-device: cuda
+x-omnivoice-peak-vram-gb: 2.479
+x-omnivoice-pre-batch-ms: 0.33
+x-omnivoice-prompt-prepare-ms: 0.00
+x-omnivoice-batch-estimate-ms: 0.24
+x-omnivoice-queue-wait-ms: 10.16
+x-omnivoice-batch-exec-ms: 1367.51
+x-omnivoice-response-encode-ms: 4.01
+x-omnivoice-batch-requests: 1
+x-omnivoice-batch-target-tokens: 196
+x-omnivoice-batch-conditioning-tokens: 464
+x-omnivoice-batch-max-sequence-length: 660
+x-omnivoice-batch-lane: short_ref
+x-omnivoice-postprocess-mode: full
+x-omnivoice-prompt-source: prompt_id
+x-omnivoice-generate-total-ms: 1367.35
+x-omnivoice-prepare-inference-inputs-ms: 1.09
+x-omnivoice-iterative-generate-ms: 1080.76
+x-omnivoice-decode-postprocess-ms: 283.14
+x-omnivoice-audio-decode-ms: 266.40
+x-omnivoice-post-process-audio-ms: 16.74
+x-omnivoice-prompt-id: 0b475c2da5ea
+x-omnivoice-rtf: 0.1757
+content-length: 377804
+content-type: audio/wav
+

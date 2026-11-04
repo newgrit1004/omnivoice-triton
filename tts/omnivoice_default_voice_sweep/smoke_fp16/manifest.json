@@ -1,0 +1,93 @@
+{
+  "version": 1,
+  "generated_at": "2026-06-16T03:11:39.056069+00:00",
+  "dry_run": false,
+  "config": {
+    "runner": "hybrid",
+    "model": "k2-fsa/OmniVoice",
+    "dtype": "fp16",
+    "device": "cuda",
+    "languages": [
+      "en"
+    ],
+    "profile_set": "pilot",
+    "num_steps": [
+      16
+    ],
+    "guidance_scale": 2.0,
+    "class_temperature": 0.0,
+    "speed": null,
+    "duration": null,
+    "include_gemini_clones": false,
+    "gemini_voices": [
+      "Aoede",
+      "Despina",
+      "Charon",
+      "Fenrir"
+    ],
+    "seed": 42
+  },
+  "planned": {
+    "design_samples": 10,
+    "gemini_clone_references": 0
+  },
+  "samples": [
+    {
+      "mode": "design",
+      "language": "en",
+      "text_case": "baseline",
+      "text": "Hello, I am your language tutor. Listen carefully and repeat after me.",
+      "profile": "auto_default",
+      "instruct": null,
+      "profile_source": "default",
+      "num_step": 16,
+      "dtype": "fp16",
+      "file": "tts/omnivoice_default_voice_sweep/smoke_fp16/en/design/baseline_auto_default_step16.wav",
+      "generation_time_s": 1.11,
+      "sample_rate": 24000,
+      "samples": 105600,
+      "duration_s": 4.4,
+      "peak_abs": 0.5,
+      "clipping_risk": false,
+      "silent_risk": false,
+      "gender": null,
+      "age": null,
+      "pitch": null,
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": "No instruct; OmniVoice default."
+    },
+    {
+      "mode": "design",
+      "language": "en",
+      "text_case": "baseline",
+      "text": "Hello, I am your language tutor. Listen carefully and repeat after me.",
+      "profile": "female_young_high",
+      "instruct": "female, young adult, high pitch",
+      "profile_source": "official",
+      "num_step": 16,
+      "dtype": "fp16",
+      "file": "tts/omnivoice_default_voice_sweep/smoke_fp16/en/design/baseline_female_young_high_step16.wav",
+      "generation_time_s": 0.357,
+      "sample_rate": 24000,
+      "samples": 105600,
+      "duration_s": 4.4,
+      "peak_abs": 0.5,
+      "clipping_risk": false,
+      "silent_risk": false,
+      "gender": "female",
+      "age": "young adult",
+      "pitch": "high pitch",
+      "accent": null,
+      "dialect": null,
+      "style": null,
+      "persona": null,
+      "notes": ""
+    }
+  ],
+  "errors": [],
+  "completed_at": "2026-06-16T03:13:05.955246+00:00",
+  "generated_samples": 2
+}

@@ -1,0 +1,447 @@
+{
+  "version": 1,
+  "generated_at": "2026-06-16T03:38:19.280014+00:00",
+  "dry_run": true,
+  "config": {
+    "runner": "hybrid",
+    "model": "k2-fsa/OmniVoice",
+    "dtype": "fp16",
+    "device": "cuda",
+    "languages": [
+      "en",
+      "es",
+      "fr",
+      "de",
+      "ar",
+      "ur",
+      "zh"
+    ],
+    "profile_set": "matrix",
+    "num_steps": [
+      16
+    ],
+    "guidance_scale": 2.0,
+    "class_temperature": 0.0,
+    "speed": null,
+    "duration": null,
+    "include_gemini_clones": false,
+    "skip_design": false,
+    "gemini_voices": [
+      "Aoede",
+      "Despina",
+      "Charon",
+      "Fenrir"
+    ],
+    "seed": 42,
+    "max_cuda_graphs": 32
+  },
+  "planned": {
+    "design_samples": 420,
+    "gemini_clone_references": 0,
+    "design_preview": [
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_child_very_low_pitch",
+        "num_step": 16,
+        "instruct": "female, child, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_child_low_pitch",
+        "num_step": 16,
+        "instruct": "female, child, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_child_moderate_pitch",
+        "num_step": 16,
+        "instruct": "female, child, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_child_high_pitch",
+        "num_step": 16,
+        "instruct": "female, child, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_child_very_high_pitch",
+        "num_step": 16,
+        "instruct": "female, child, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_teenager_very_low_pitch",
+        "num_step": 16,
+        "instruct": "female, teenager, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_teenager_low_pitch",
+        "num_step": 16,
+        "instruct": "female, teenager, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_teenager_moderate_pitch",
+        "num_step": 16,
+        "instruct": "female, teenager, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_teenager_high_pitch",
+        "num_step": 16,
+        "instruct": "female, teenager, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_teenager_very_high_pitch",
+        "num_step": 16,
+        "instruct": "female, teenager, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_adult_very_low_pitch",
+        "num_step": 16,
+        "instruct": "female, young adult, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_adult_low_pitch",
+        "num_step": 16,
+        "instruct": "female, young adult, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_adult_moderate_pitch",
+        "num_step": 16,
+        "instruct": "female, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_adult_high_pitch",
+        "num_step": 16,
+        "instruct": "female, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_young_adult_very_high_pitch",
+        "num_step": 16,
+        "instruct": "female, young adult, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_middleaged_very_low_pitch",
+        "num_step": 16,
+        "instruct": "female, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_middleaged_low_pitch",
+        "num_step": 16,
+        "instruct": "female, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_middleaged_moderate_pitch",
+        "num_step": 16,
+        "instruct": "female, middle-aged, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_middleaged_high_pitch",
+        "num_step": 16,
+        "instruct": "female, middle-aged, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_middleaged_very_high_pitch",
+        "num_step": 16,
+        "instruct": "female, middle-aged, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_elderly_very_low_pitch",
+        "num_step": 16,
+        "instruct": "female, elderly, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_elderly_low_pitch",
+        "num_step": 16,
+        "instruct": "female, elderly, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_elderly_moderate_pitch",
+        "num_step": 16,
+        "instruct": "female, elderly, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_elderly_high_pitch",
+        "num_step": 16,
+        "instruct": "female, elderly, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "female_elderly_very_high_pitch",
+        "num_step": 16,
+        "instruct": "female, elderly, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_child_very_low_pitch",
+        "num_step": 16,
+        "instruct": "male, child, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_child_low_pitch",
+        "num_step": 16,
+        "instruct": "male, child, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_child_moderate_pitch",
+        "num_step": 16,
+        "instruct": "male, child, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_child_high_pitch",
+        "num_step": 16,
+        "instruct": "male, child, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_child_very_high_pitch",
+        "num_step": 16,
+        "instruct": "male, child, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_teenager_very_low_pitch",
+        "num_step": 16,
+        "instruct": "male, teenager, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_teenager_low_pitch",
+        "num_step": 16,
+        "instruct": "male, teenager, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_teenager_moderate_pitch",
+        "num_step": 16,
+        "instruct": "male, teenager, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_teenager_high_pitch",
+        "num_step": 16,
+        "instruct": "male, teenager, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_teenager_very_high_pitch",
+        "num_step": 16,
+        "instruct": "male, teenager, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_young_adult_very_low_pitch",
+        "num_step": 16,
+        "instruct": "male, young adult, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_young_adult_low_pitch",
+        "num_step": 16,
+        "instruct": "male, young adult, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_young_adult_moderate_pitch",
+        "num_step": 16,
+        "instruct": "male, young adult, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_young_adult_high_pitch",
+        "num_step": 16,
+        "instruct": "male, young adult, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_young_adult_very_high_pitch",
+        "num_step": 16,
+        "instruct": "male, young adult, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middleaged_very_low_pitch",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middleaged_low_pitch",
+        "num_step": 16,
+        "instruct": "male, middle-aged, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middleaged_moderate_pitch",
+        "num_step": 16,
+        "instruct": "male, middle-aged, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middleaged_high_pitch",
+        "num_step": 16,
+        "instruct": "male, middle-aged, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_middleaged_very_high_pitch",
+        "num_step": 16,
+        "instruct": "male, middle-aged, very high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_elderly_very_low_pitch",
+        "num_step": 16,
+        "instruct": "male, elderly, very low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_elderly_low_pitch",
+        "num_step": 16,
+        "instruct": "male, elderly, low pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_elderly_moderate_pitch",
+        "num_step": 16,
+        "instruct": "male, elderly, moderate pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_elderly_high_pitch",
+        "num_step": 16,
+        "instruct": "male, elderly, high pitch"
+      },
+      {
+        "mode": "design",
+        "language": "en",
+        "text_case": "baseline",
+        "profile": "male_elderly_very_high_pitch",
+        "num_step": 16,
+        "instruct": "male, elderly, very high pitch"
+      }
+    ],
+    "gemini_clone_preview": []
+  },
+  "samples": [],
+  "errors": []
+}

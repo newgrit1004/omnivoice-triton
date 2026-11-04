@@ -1,0 +1,166 @@
+{
+  "gpu": "NVIDIA GeForce RTX 3090",
+  "physical_vram_mib": 24576,
+  "visible_vram_bytes": 25296044032,
+  "driver": "580.65.06",
+  "cuda_runtime": "12.8",
+  "date_chicago": "2026-11-03",
+  "before_code": "0e94f2c",
+  "after_code": "5558b22",
+  "startup_seed": 20261103,
+  "model_revision": "c5fdb5ccb189668d56333f77ba2629f4cd7535f4",
+  "profile": "hybrid FP16,16steps,speed1,postprocess off,complete WAV",
+  "qualification": "15 sequential corpus pairs;3 additional warmup pairs retained in full experiment. All18 byte-identical. This proves preservation in these fixtures, not universal word correctness.",
+  "samples": [
+    {
+      "id": "single-corpus-0000-en-short",
+      "language": "en",
+      "expected": "Hello! How are you feeling today?",
+      "before_sha256": "4313da3ee468cab51980200e1ad7af85b73d0a3f24a6c61125dc57838ec4d7f3",
+      "after_sha256": "4313da3ee468cab51980200e1ad7af85b73d0a3f24a6c61125dc57838ec4d7f3",
+      "byte_identical": true,
+      "before": "before/single-corpus-0000-en-short.wav",
+      "after": "after/single-corpus-0000-en-short.wav"
+    },
+    {
+      "id": "single-corpus-0001-en-medium",
+      "language": "en",
+      "expected": "Today we are going to practice a short conversation about ordering lunch. Tell me what you would like to eat and drink, and I will help you say it clearly.",
+      "before_sha256": "a683d42344b132bf66e2a760e889339c43f60591c0dafe01ae1aa5dfcdfee7eb",
+      "after_sha256": "a683d42344b132bf66e2a760e889339c43f60591c0dafe01ae1aa5dfcdfee7eb",
+      "byte_identical": true,
+      "before": "before/single-corpus-0001-en-medium.wav",
+      "after": "after/single-corpus-0001-en-medium.wav"
+    },
+    {
+      "id": "single-corpus-0002-en-long",
+      "language": "en",
+      "expected": "Learning a language takes time, but small daily habits make a real difference. Start by listening to a short conversation and repeating a few useful sentences. Then try using those sentences to describe your own day. If you forget a word, explain the idea another way and keep talking. The goal is to communicate with confidence while gradually improving your pronunciation, vocabulary, and understanding.",
+      "before_sha256": "16a941a5419cf31e1a34af8ff47e8b9d2b73be98dc67f5011c6040ae01956e91",
+      "after_sha256": "16a941a5419cf31e1a34af8ff47e8b9d2b73be98dc67f5011c6040ae01956e91",
+      "byte_identical": true,
+      "before": "before/single-corpus-0002-en-long.wav",
+      "after": "after/single-corpus-0002-en-long.wav"
+    },
+    {
+      "id": "single-corpus-0003-es-short",
+      "language": "es",
+      "expected": "¡Hola! ¿Cómo te sientes hoy?",
+      "before_sha256": "3754e4f1f81c6113a4694a3e4adb119e1117281266bb8184709845b68b58cbca",
+      "after_sha256": "3754e4f1f81c6113a4694a3e4adb119e1117281266bb8184709845b68b58cbca",
+      "byte_identical": true,
+      "before": "before/single-corpus-0003-es-short.wav",
+      "after": "after/single-corpus-0003-es-short.wav"
+    },
+    {
+      "id": "single-corpus-0004-es-medium",
+      "language": "es",
+      "expected": "Hoy vamos a practicar una conversación sobre cómo pedir el almuerzo. Dime qué te gustaría comer y beber, y te ayudaré a expresarlo con claridad.",
+      "before_sha256": "b34f5491adab2a3d6e1848b263f1cb63802e6c056dde2beafbb48ee6e19e6d02",
+      "after_sha256": "b34f5491adab2a3d6e1848b263f1cb63802e6c056dde2beafbb48ee6e19e6d02",
+      "byte_identical": true,
+      "before": "before/single-corpus-0004-es-medium.wav",
+      "after": "after/single-corpus-0004-es-medium.wav"
+    },
+    {
+      "id": "single-corpus-0005-es-long",
+      "language": "es",
+      "expected": "Aprender un idioma requiere tiempo, pero los pequeños hábitos diarios marcan una diferencia. Empieza escuchando una conversación breve y repitiendo algunas frases útiles. Después intenta usar esas frases para describir tu propio día. Si olvidas una palabra, explica la idea de otra manera y sigue hablando. El objetivo es comunicarte con confianza mientras mejoras poco a poco tu pronunciación, tu vocabulario y tu comprensión.",
+      "before_sha256": "14c603a5dfa55f33050405fb1b7642ea38c18799f8540c9e973a5671b42d92a7",
+      "after_sha256": "14c603a5dfa55f33050405fb1b7642ea38c18799f8540c9e973a5671b42d92a7",
+      "byte_identical": true,
+      "before": "before/single-corpus-0005-es-long.wav",
+      "after": "after/single-corpus-0005-es-long.wav"
+    },
+    {
+      "id": "single-corpus-0006-ar-short",
+      "language": "ar",
+      "expected": "مرحباً! كيف تشعر اليوم؟",
+      "before_sha256": "383a4fbcae7b942a319f739a7e7ca376a82363895c8a513e27b0a8ce43bc2d05",
+      "after_sha256": "383a4fbcae7b942a319f739a7e7ca376a82363895c8a513e27b0a8ce43bc2d05",
+      "byte_identical": true,
+      "before": "before/single-corpus-0006-ar-short.wav",
+      "after": "after/single-corpus-0006-ar-short.wav"
+    },
+    {
+      "id": "single-corpus-0007-ar-medium",
+      "language": "ar",
+      "expected": "اليوم سوف نتدرب على محادثة قصيرة حول طلب الغداء. أخبرني بما ترغب في تناوله من طعام وشراب، وسوف أساعدك على التعبير عن ذلك بوضوح.",
+      "before_sha256": "7344c9aad4e0b84e8c5a85f8888690a2b69430e61ee0697c1a2b1b45441a7520",
+      "after_sha256": "7344c9aad4e0b84e8c5a85f8888690a2b69430e61ee0697c1a2b1b45441a7520",
+      "byte_identical": true,
+      "before": "before/single-corpus-0007-ar-medium.wav",
+      "after": "after/single-corpus-0007-ar-medium.wav"
+    },
+    {
+      "id": "single-corpus-0008-ar-long",
+      "language": "ar",
+      "expected": "يحتاج تعلم لغة جديدة إلى الوقت، لكن العادات اليومية الصغيرة تحدث فرقاً كبيراً. ابدأ بالاستماع إلى محادثة قصيرة وتكرار بعض الجمل المفيدة. بعد ذلك حاول استخدام هذه الجمل لوصف يومك. وإذا نسيت كلمة، فاشرح الفكرة بطريقة أخرى واستمر في الحديث. الهدف هو التواصل بثقة مع تحسين النطق والمفردات والفهم تدريجياً. ويمكنك التدرب مع صديق أو معلم وتسجيل صوتك للاستماع إلى تقدمك مع مرور الأيام.",
+      "before_sha256": "990e68722ae56ef333e9f49287f539c66490d1779281081a0fec30f1622957cb",
+      "after_sha256": "990e68722ae56ef333e9f49287f539c66490d1779281081a0fec30f1622957cb",
+      "byte_identical": true,
+      "before": "before/single-corpus-0008-ar-long.wav",
+      "after": "after/single-corpus-0008-ar-long.wav"
+    },
+    {
+      "id": "single-corpus-0009-en-critical-0",
+      "language": "en",
+      "expected": "Please do not cancel my appointment with Doctor Rivera tomorrow at three fifteen.",
+      "before_sha256": "997eb7d003e1069e9cbb2fa84f8adb2a1d3949d8e679f146ad40c9a389bd0682",
+      "after_sha256": "997eb7d003e1069e9cbb2fa84f8adb2a1d3949d8e679f146ad40c9a389bd0682",
+      "byte_identical": true,
+      "before": "before/single-corpus-0009-en-critical-0.wav",
+      "after": "after/single-corpus-0009-en-critical-0.wav"
+    },
+    {
+      "id": "single-corpus-0010-en-critical-1",
+      "language": "en",
+      "expected": "My booking code is alpha seven nine four, and the total is fifty two dollars.",
+      "before_sha256": "f9b051c5ed7ccb031782b7d33f44f41a298c6aa695e155b2d6037b0213d9cb2b",
+      "after_sha256": "f9b051c5ed7ccb031782b7d33f44f41a298c6aa695e155b2d6037b0213d9cb2b",
+      "byte_identical": true,
+      "before": "before/single-corpus-0010-en-critical-1.wav",
+      "after": "after/single-corpus-0010-en-critical-1.wav"
+    },
+    {
+      "id": "single-corpus-0011-es-critical-2",
+      "language": "es",
+      "expected": "Por favor, no cancele mi cita con la doctora Rivera mañana a las tres y cuarto.",
+      "before_sha256": "73a2fbe43f3e2b826e41b1fe7dcc64faa4bb577678cef3fa60c218158095f3c9",
+      "after_sha256": "73a2fbe43f3e2b826e41b1fe7dcc64faa4bb577678cef3fa60c218158095f3c9",
+      "byte_identical": true,
+      "before": "before/single-corpus-0011-es-critical-2.wav",
+      "after": "after/single-corpus-0011-es-critical-2.wav"
+    },
+    {
+      "id": "single-corpus-0012-es-critical-3",
+      "language": "es",
+      "expected": "Mi código de reserva es alfa siete nueve cuatro, y el total es cincuenta y dos dólares.",
+      "before_sha256": "47038aa16c34a209518981d6bed2547c80371566c378b99f9733dc8ce3c9bb9e",
+      "after_sha256": "47038aa16c34a209518981d6bed2547c80371566c378b99f9733dc8ce3c9bb9e",
+      "byte_identical": true,
+      "before": "before/single-corpus-0012-es-critical-3.wav",
+      "after": "after/single-corpus-0012-es-critical-3.wav"
+    },
+    {
+      "id": "single-corpus-0013-ar-critical-4",
+      "language": "ar",
+      "expected": "من فضلك، لا تلغ موعدي مع الطبيب سامر غداً في الساعة الثالثة والربع.",
+      "before_sha256": "acf02d95ceb0f40a2f4a48c97f71b2117c336a348da52bc825be6b5fe22630cd",
+      "after_sha256": "acf02d95ceb0f40a2f4a48c97f71b2117c336a348da52bc825be6b5fe22630cd",
+      "byte_identical": true,
+      "before": "before/single-corpus-0013-ar-critical-4.wav",
+      "after": "after/single-corpus-0013-ar-critical-4.wav"
+    },
+    {
+      "id": "single-corpus-0014-ar-critical-5",
+      "language": "ar",
+      "expected": "رمز الحجز هو ألف سبعة تسعة أربعة، والمجموع اثنان وخمسون دولاراً.",
+      "before_sha256": "2b12c37f5b0e1279b334d398750dc51020197a9973ebcaab5aca40a16ca80fdd",
+      "after_sha256": "2b12c37f5b0e1279b334d398750dc51020197a9973ebcaab5aca40a16ca80fdd",
+      "byte_identical": true,
+      "before": "before/single-corpus-0014-ar-critical-5.wav",
+      "after": "after/single-corpus-0014-ar-critical-5.wav"
+    }
+  ]
+}
