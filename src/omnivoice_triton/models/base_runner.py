@@ -3,6 +3,8 @@
 import logging
 import threading
 import time
+from collections import defaultdict
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from typing import Any
 
@@ -93,6 +95,79 @@ def _ensure_audio_batch(audio: np.ndarray | Any) -> np.ndarray:
     return waveform
 
 
+def _decode_audio_token_batch(
+    results: list[Any],
+    *,
+    audio_tokenizer: Any,
+    sampling_rate: int,
+    cross_fade_chunks: Callable[..., Any],
+    max_batch_size: int = 1,
+) -> list[np.ndarray]:
+    """Decode equal-shaped token sequences together without padding any audio.
+
+    The default preserves the original one-at-a-time decoder path. Opt-in batching
+    changes only the codec batch dimension: generated token IDs, sequence lengths,
+    chunk crossfades, output order and postprocessing remain unchanged. Different
+    batch shapes can select different GPU convolution algorithms, so callers must
+    qualify numerical and speech quality rather than assume bitwise equivalence.
+    """
+    tokenizer_device = audio_tokenizer.device
+
+    def decode_one(tokens: Any) -> np.ndarray:
+        if isinstance(tokens, list):
+            chunk_audios = [
+                audio_tokenizer.decode(t.to(tokenizer_device).unsqueeze(0))
+                .audio_values[0]
+                .detach()
+                .cpu()
+                .numpy()
+                for t in tokens
+            ]
+            return _ensure_audio_batch(cross_fade_chunks(chunk_audios, sampling_rate))
+        return _ensure_audio_batch(
+            audio_tokenizer.decode(tokens.to(tokenizer_device).unsqueeze(0))
+            .audio_values[0]
+            .detach()
+            .cpu()
+            .numpy()
+        )
+
+    if max_batch_size <= 1:
+        return [decode_one(tokens) for tokens in results]
+
+    decoded: list[np.ndarray | None] = [None] * len(results)
+    groups: dict[tuple[Any, ...], list[tuple[int, torch.Tensor]]] = defaultdict(list)
+    for index, tokens in enumerate(results):
+        if isinstance(tokens, list):
+            # Long-form chunk boundaries and crossfade order stay exactly as before.
+            decoded[index] = decode_one(tokens)
+            continue
+        key = (tuple(tokens.shape), tokens.dtype, tokens.device)
+        groups[key].append((index, tokens))
+
+    for entries in groups.values():
+        for start in range(0, len(entries), max_batch_size):
+            batch = entries[start : start + max_batch_size]
+            if len(batch) == 1:
+                index, tokens = batch[0]
+                decoded[index] = decode_one(tokens)
+                continue
+            # Exact lengths only: zero padding can alter codec boundary samples.
+            stacked = torch.stack([tokens for _, tokens in batch]).to(tokenizer_device)
+            audio_values = audio_tokenizer.decode(stacked).audio_values
+            if audio_values.shape[0] != len(batch):
+                raise RuntimeError(
+                    "Audio tokenizer returned an invalid batch dimension"
+                )
+            audio_arrays = audio_values.detach().cpu().numpy()
+            for offset, (index, _) in enumerate(batch):
+                decoded[index] = _ensure_audio_batch(audio_arrays[offset])
+
+    if any(audio is None for audio in decoded):
+        raise RuntimeError("Audio tokenizer did not return every requested waveform")
+    return [audio for audio in decoded if audio is not None]
+
+
 def _resolve_postprocess_mode(value: Any) -> str:
     """Normalize postprocess mode names across bool and string inputs."""
     if isinstance(value, bool):
@@ -155,11 +230,13 @@ class BaseRunner:
         model_id: str = DEFAULT_MODEL_ID,
         dtype: str | torch.dtype = "fp16",
         decode_postprocess_workers: int = 0,
+        audio_decode_batch_size: int = 1,
     ) -> None:
         self.device = device
         self.model_id = model_id
         self.dtype = _resolve_dtype(dtype)
         self.decode_postprocess_workers = max(0, int(decode_postprocess_workers))
+        self.audio_decode_batch_size = max(1, int(audio_decode_batch_size))
         self._model: Any = None
         self._decode_postprocess_executor: ThreadPoolExecutor | None = None
         self._generation_metrics_lock = threading.Lock()
@@ -406,28 +483,6 @@ class BaseRunner:
             metrics = getattr(model, "_omnivoice_last_generation_metrics", None) or {}
             return {key: float(value) for key, value in metrics.items()}
 
-        def _decode_tokens_to_numpy(tokens: Any) -> np.ndarray:
-            tokenizer_device = model.audio_tokenizer.device
-            if isinstance(tokens, list):
-                chunk_audios = [
-                    model.audio_tokenizer.decode(t.to(tokenizer_device).unsqueeze(0))
-                    .audio_values[0]
-                    .detach()
-                    .cpu()
-                    .numpy()
-                    for t in tokens
-                ]
-                return _ensure_audio_batch(
-                    cross_fade_chunks(chunk_audios, model.sampling_rate)
-                )
-            return _ensure_audio_batch(
-                model.audio_tokenizer.decode(tokens.to(tokenizer_device).unsqueeze(0))
-                .audio_values[0]
-                .detach()
-                .cpu()
-                .numpy()
-            )
-
         def _post_process_audio_array(
             generated_audio: np.ndarray,
             ref_rms: float | None,
@@ -527,10 +582,15 @@ class BaseRunner:
                     results[idx] = res
 
             decode_started = time.perf_counter()
-            decoded_audios = []
             for index in range(full_task.batch_size):
                 assert results[index] is not None, f"Result {index} was not generated"
-                decoded_audios.append(_decode_tokens_to_numpy(results[index]))
+            decoded_audios = _decode_audio_token_batch(
+                results,
+                audio_tokenizer=model.audio_tokenizer,
+                sampling_rate=model.sampling_rate,
+                cross_fade_chunks=cross_fade_chunks,
+                max_batch_size=self.audio_decode_batch_size,
+            )
             audio_decode_ms = (time.perf_counter() - decode_started) * 1000.0
             _record_metric("audio_decode_ms", audio_decode_ms)
 

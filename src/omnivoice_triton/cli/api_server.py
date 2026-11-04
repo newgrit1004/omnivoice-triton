@@ -333,6 +333,13 @@ def build_parser() -> argparse.ArgumentParser:
         help="Worker threads for CPU-side audio postprocessing after decode.",
     )
     parser.add_argument(
+        "--audio-decode-batch-size",
+        type=int,
+        default=1,
+        help="Opt-in maximum equal-length audio-token sequences decoded together "
+        "(1 preserves serial audio decoding).",
+    )
+    parser.add_argument(
         "--max-cuda-graphs",
         type=int,
         default=DEFAULT_MAX_CUDA_GRAPHS,
@@ -877,6 +884,7 @@ def _build_runner(
     enable_sage_attention: bool,
     full_triton_patch: bool,
     decode_postprocess_workers: int,
+    audio_decode_batch_size: int,
     max_cuda_graphs: int,
     runner_factory: Callable[..., Any],
 ) -> Any:
@@ -885,6 +893,7 @@ def _build_runner(
         "model_id": model_checkpoint,
         "dtype": dtype,
         "decode_postprocess_workers": decode_postprocess_workers,
+        "audio_decode_batch_size": audio_decode_batch_size,
     }
     if runner_name in {"faster", "hybrid"}:
         kwargs["max_cuda_graphs"] = max(0, int(max_cuda_graphs))
@@ -935,6 +944,7 @@ def create_app(
     enable_sage_attention: bool = False,
     full_triton_patch: bool = False,
     decode_postprocess_workers: int = DEFAULT_DECODE_POSTPROCESS_WORKERS,
+    audio_decode_batch_size: int = 1,
     max_cuda_graphs: int = DEFAULT_MAX_CUDA_GRAPHS,
     save_dir: str | None = None,
     batch_collect_ms: float = DEFAULT_BATCH_COLLECT_MS,
@@ -959,6 +969,8 @@ def create_app(
     runner_factory: Callable[..., Any] | None = None,
 ) -> FastAPI:
     """Create the FastAPI app."""
+    if audio_decode_batch_size < 1:
+        raise ValueError("audio_decode_batch_size must be at least 1.")
     resolved_device = device or get_best_device()
     if resolved_device.startswith("cuda"):
         require_cuda_available()
@@ -993,6 +1005,7 @@ def create_app(
             enable_sage_attention=enable_sage_attention,
             full_triton_patch=full_triton_patch,
             decode_postprocess_workers=decode_postprocess_workers,
+            audio_decode_batch_size=audio_decode_batch_size,
             max_cuda_graphs=max_cuda_graphs,
             runner_factory=factory,
         )
@@ -1136,6 +1149,7 @@ def create_app(
     app.state.enable_sage_attention = enable_sage_attention
     app.state.full_triton_patch = full_triton_patch
     app.state.decode_postprocess_workers = decode_postprocess_workers
+    app.state.audio_decode_batch_size = audio_decode_batch_size
     app.state.max_cuda_graphs = max(0, int(max_cuda_graphs))
     app.state.save_dir = Path(save_dir) if save_dir else None
     app.state.runner = None
@@ -1212,6 +1226,7 @@ def create_app(
             "sage_attention": bool(app.state.enable_sage_attention),
             "full_triton_patch": bool(app.state.full_triton_patch),
             "decode_postprocess_workers": int(app.state.decode_postprocess_workers),
+            "audio_decode_batch_size": int(app.state.audio_decode_batch_size),
             "max_cuda_graphs": int(app.state.max_cuda_graphs),
             "batch_collect_ms": app.state.batch_collect_ms,
             "max_batch_requests": app.state.max_batch_requests,
@@ -2267,6 +2282,7 @@ def main(argv: list[str] | None = None) -> None:
         enable_sage_attention=args.sage_attention,
         full_triton_patch=args.full_triton_patch,
         decode_postprocess_workers=args.decode_postprocess_workers,
+        audio_decode_batch_size=args.audio_decode_batch_size,
         max_cuda_graphs=args.max_cuda_graphs,
         save_dir=args.save_dir,
         batch_collect_ms=args.batch_collect_ms,

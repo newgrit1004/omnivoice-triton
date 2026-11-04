@@ -16,7 +16,7 @@ import soundfile as sf
 import torch
 from fastapi.testclient import TestClient
 
-from omnivoice_triton.cli.api_server import create_app
+from omnivoice_triton.cli.api_server import build_parser, create_app
 from omnivoice_triton.serving import QueueFullError, WorkerLifecycleReporter
 
 
@@ -230,6 +230,7 @@ def test_health_and_languages(tmp_path: Path) -> None:
         enable_sage_attention=True,
         full_triton_patch=True,
         decode_postprocess_workers=3,
+        audio_decode_batch_size=8,
         prewarm_clone_batch_sizes=(2, 4),
         prewarm_clone_sequence_lengths=(163,),
     )
@@ -247,6 +248,7 @@ def test_health_and_languages(tmp_path: Path) -> None:
         assert payload["sage_attention"] is True
         assert payload["full_triton_patch"] is True
         assert payload["decode_postprocess_workers"] == 3
+        assert payload["audio_decode_batch_size"] == 8
         assert payload["max_cuda_graphs"] == 8
         assert payload["batch_collect_ms"] == 10.0
         assert payload["max_batch_requests"] == 32
@@ -295,8 +297,20 @@ def test_health_and_languages(tmp_path: Path) -> None:
     assert created[0].kwargs["enable_sage_attention"] is True
     assert created[0].kwargs["patch_range"] is None
     assert created[0].kwargs["decode_postprocess_workers"] == 3
+    assert created[0].kwargs["audio_decode_batch_size"] == 8
     assert created[0].kwargs["max_cuda_graphs"] == 8
     assert created[0].prewarmed_shapes == [[4, 8, 163], [8, 8, 163]]
+
+
+def test_audio_decode_batch_size_defaults_to_serial_and_validates() -> None:
+    parser = build_parser()
+    assert parser.parse_args([]).audio_decode_batch_size == 1
+    assert (
+        parser.parse_args(["--audio-decode-batch-size", "8"]).audio_decode_batch_size
+        == 8
+    )
+    with pytest.raises(ValueError, match="audio_decode_batch_size"):
+        create_app(audio_decode_batch_size=0)
 
 
 def test_worker_drain_rejects_new_generate_requests(tmp_path: Path) -> None:

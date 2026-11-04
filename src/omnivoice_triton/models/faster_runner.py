@@ -273,12 +273,14 @@ class FasterRunner(BaseRunner):
         dtype: str = "fp16",
         decode_postprocess_workers: int = 0,
         max_cuda_graphs: int = 32,
+        audio_decode_batch_size: int = 1,
     ) -> None:
         super().__init__(
             device=device,
             model_id=model_id,
             dtype=dtype,
             decode_postprocess_workers=decode_postprocess_workers,
+            audio_decode_batch_size=audio_decode_batch_size,
         )
         self._graph_forward: _CUDAGraphForward | None = None
         self.max_cuda_graphs = max(0, int(max_cuda_graphs))
