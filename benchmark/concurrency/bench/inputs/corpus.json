@@ -1,0 +1,65 @@
+[
+  {
+    "id": "en-short",
+    "language": "en",
+    "api_language": "en",
+    "length": "short",
+    "text": "Hello! How are you feeling today?"
+  },
+  {
+    "id": "en-medium",
+    "language": "en",
+    "api_language": "en",
+    "length": "medium",
+    "text": "Today we are going to practice a short conversation about ordering lunch. Tell me what you would like to eat and drink, and I will help you say it clearly."
+  },
+  {
+    "id": "en-long",
+    "language": "en",
+    "api_language": "en",
+    "length": "long",
+    "text": "Learning a language takes time, but small daily habits make a real difference. Start by listening to a short conversation and repeating a few useful sentences. Then try using those sentences to describe your own day. If you forget a word, explain the idea another way and keep talking. The goal is to communicate with confidence while gradually improving your pronunciation, vocabulary, and understanding."
+  },
+  {
+    "id": "es-short",
+    "language": "es",
+    "api_language": "es",
+    "length": "short",
+    "text": "¡Hola! ¿Cómo te sientes hoy?"
+  },
+  {
+    "id": "es-medium",
+    "language": "es",
+    "api_language": "es",
+    "length": "medium",
+    "text": "Hoy vamos a practicar una conversación sobre cómo pedir el almuerzo. Dime qué te gustaría comer y beber, y te ayudaré a expresarlo con claridad."
+  },
+  {
+    "id": "es-long",
+    "language": "es",
+    "api_language": "es",
+    "length": "long",
+    "text": "Aprender un idioma requiere tiempo, pero los pequeños hábitos diarios marcan una diferencia. Empieza escuchando una conversación breve y repitiendo algunas frases útiles. Después intenta usar esas frases para describir tu propio día. Si olvidas una palabra, explica la idea de otra manera y sigue hablando. El objetivo es comunicarte con confianza mientras mejoras poco a poco tu pronunciación, tu vocabulario y tu comprensión."
+  },
+  {
+    "id": "ar-short",
+    "language": "ar",
+    "api_language": "arb",
+    "length": "short",
+    "text": "مرحباً! كيف تشعر اليوم؟"
+  },
+  {
+    "id": "ar-medium",
+    "language": "ar",
+    "api_language": "arb",
+    "length": "medium",
+    "text": "اليوم سوف نتدرب على محادثة قصيرة حول طلب الغداء. أخبرني بما ترغب في تناوله من طعام وشراب، وسوف أساعدك على التعبير عن ذلك بوضوح."
+  },
+  {
+    "id": "ar-long",
+    "language": "ar",
+    "api_language": "arb",
+    "length": "long",
+    "text": "يحتاج تعلم لغة جديدة إلى الوقت، لكن العادات اليومية الصغيرة تحدث فرقاً كبيراً. ابدأ بالاستماع إلى محادثة قصيرة وتكرار بعض الجمل المفيدة. بعد ذلك حاول استخدام هذه الجمل لوصف يومك. وإذا نسيت كلمة، فاشرح الفكرة بطريقة أخرى واستمر في الحديث. الهدف هو التواصل بثقة مع تحسين النطق والمفردات والفهم تدريجياً. ويمكنك التدرب مع صديق أو معلم وتسجيل صوتك للاستماع إلى تقدمك مع مرور الأيام."
+  }
+]

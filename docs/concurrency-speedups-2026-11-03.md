@@ -35,7 +35,7 @@ With 128 pending slots, all 100 requests completed in both baseline and async va
 
 The real HTTP overload pilots offered 1,000 and 5,000 requests with 16 pending slots. Before optimization, 26/1,000 and 58/5,000 completed; async completed 34/1,000 and 66/5,000. Remaining requests received HTTP 429. These runs include client dispatch and new-connection effects, including a roughly 2.1–2.3-second dispatch spread for 5,000 requests, and accepted request sets differ. They demonstrate bounded overload behavior, not support for 1,000 or 5,000 successful simultaneous calls. A warm fleet, gateway admission/routing and measured per-GPU SLO capacity remain required.
 
-Loopback metrics exclude the external network, Lingua gateway, MuseTalk and playback. Reference recordings are 12–15 seconds, deliberately longer than the usual 3–10-second guidance.
+Loopback metrics exclude the external network, Lingua gateway, MuseTalk and playback. Reference recordings are 12–15 seconds, deliberately longer than the usual 3–10-second guidance. Three reference voices were registered before timed generation, and requests reused their prompt IDs. Reference-registration latency is excluded; cold new-voice requests are not qualified by the warm short-response result.
 
 ## Audio preservation and word checks
 
