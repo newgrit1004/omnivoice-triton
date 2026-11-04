@@ -924,6 +924,100 @@ def test_generate_batches_concurrent_requests(tmp_path: Path) -> None:
     assert sorted(flattened) == sorted(texts)
 
 
+def test_waiting_generations_do_not_starve_health_or_hide_queue(
+    tmp_path: Path,
+) -> None:
+    """More than AnyIO's default 40 waiters remain visible and health stays usable."""
+    created: list[_FakeRunner] = []
+    app = _make_app(
+        tmp_path,
+        created,
+        load_asr=False,
+        batch_collect_ms=0,
+        max_pending_requests=64,
+        max_batch_requests=1,
+    )
+    entered, release = threading.Event(), threading.Event()
+    request_count = 48
+
+    with TestClient(app) as client:
+        original_generate = created[0].model.generate
+
+        def blocked_generate(**kwargs):
+            entered.set()
+            assert release.wait(10)
+            return original_generate(**kwargs)
+
+        created[0].model.generate = blocked_generate
+        with ThreadPoolExecutor(max_workers=request_count + 1) as executor:
+            responses = [
+                executor.submit(client.post, "/generate", **_design_request())
+                for _ in range(request_count)
+            ]
+            try:
+                assert entered.wait(3)
+                deadline = time.monotonic() + 5
+                while (
+                    app.state.batcher.queue_snapshot()["pending_requests"]
+                    < request_count - 1
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.01)
+                assert (
+                    app.state.batcher.queue_snapshot()["pending_requests"]
+                    == request_count - 1
+                )
+                health = executor.submit(client.get, "/health").result(timeout=2)
+                assert health.status_code == 200
+                assert health.json()["worker"]["active_requests"] == request_count
+                assert health.json()["batcher_queue"]["pending_requests"] == 47
+            finally:
+                release.set()
+            assert all(f.result(timeout=5).status_code == 200 for f in responses)
+
+
+def test_cold_prompt_waits_use_separate_bounded_cpu_limiter(tmp_path: Path) -> None:
+    """Waiting for prompt creation must leave the control-route pool available."""
+    created: list[_FakeRunner] = []
+    app = _make_app(tmp_path, created, load_asr=False)
+    entered, release = threading.Event(), threading.Event()
+
+    def blocker():
+        entered.set()
+        assert release.wait(10)
+
+    def upload(client):
+        return client.post(
+            "/generate",
+            data={"mode": "clone", "text": "Hello.", "ref_text": "Reference."},
+            files={"ref_audio": ("ref.wav", _fake_wav_bytes(), "audio/wav")},
+        )
+
+    with TestClient(app) as client:
+        count = int(app.state.prompt_prepare_limiter.total_tokens) + 2
+        with ThreadPoolExecutor(max_workers=count + 2) as executor:
+            blocked = executor.submit(
+                app.state.batcher.run_on_gpu_thread, blocker, name="blocker"
+            )
+            assert entered.wait(3)
+            responses = [executor.submit(upload, client) for _ in range(count)]
+            try:
+                deadline = time.monotonic() + 5
+                while (
+                    app.state.prompt_prepare_limiter.borrowed_tokens < count - 2
+                    and time.monotonic() < deadline
+                ):
+                    time.sleep(0.01)
+                assert app.state.prompt_prepare_limiter.borrowed_tokens == count - 2
+                health = executor.submit(client.get, "/health").result(timeout=2)
+                assert health.status_code == 200
+                assert health.json()["batcher_queue"]["pending_gpu_tasks"] == 1
+            finally:
+                release.set()
+            blocked.result(timeout=3)
+            assert all(f.result(timeout=5).status_code == 200 for f in responses)
+
+
 def test_generate_uses_batch_buckets(tmp_path: Path) -> None:
     created: list[_FakeRunner] = []
     app = _make_app(
@@ -1183,10 +1277,11 @@ def test_generate_queue_overload_is_429_and_health_remains_ok(
     created: list[_FakeRunner] = []
     app = _make_app(tmp_path, created, load_asr=False)
     with TestClient(app) as client:
-        def full(request):
+
+        async def full(request):
             raise QueueFullError("Generation queue is full.")
 
-        monkeypatch.setattr(app.state.batcher, "submit", full)
+        monkeypatch.setattr(app.state.batcher, "submit_async", full)
         response = client.post("/generate", **_design_request())
         assert response.status_code == 429
         health = client.get("/health")

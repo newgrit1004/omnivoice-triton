@@ -19,6 +19,7 @@ from pathlib import Path
 from typing import Any, Callable
 from uuid import uuid4
 
+import anyio
 import numpy as np
 import soundfile as sf
 import torch
@@ -62,6 +63,7 @@ DEFAULT_BATCH_BUCKET_SIZES = (1, 2, 4, 8, 16, 32)
 DEFAULT_REGISTERED_CLONE_PROMPT_STORE_SIZE = 256
 DEFAULT_TOKEN_ESTIMATE_CACHE_SIZE = 4096
 DEFAULT_DECODE_POSTPROCESS_WORKERS = max(1, min(4, os.cpu_count() or 1))
+DEFAULT_REQUEST_CPU_WORKERS = max(1, min(8, os.cpu_count() or 1))
 DEFAULT_MAX_CUDA_GRAPHS = 8
 DEFAULT_PREWARM_CLONE_BATCH_SIZES: tuple[int, ...] = ()
 DEFAULT_PREWARM_CLONE_SEQUENCE_LENGTHS: tuple[int, ...] = ()
@@ -973,6 +975,16 @@ def create_app(
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
+        # Prompt preparation may wait for GPU work. Keep those waits outside the
+        # shared AnyIO limiter used by /health, /drain and other control routes.
+        # Construct inside the app's event loop, never as a process-global limiter.
+        app.state.request_cpu_limiter = anyio.CapacityLimiter(
+            DEFAULT_REQUEST_CPU_WORKERS
+        )
+        # Cold voice uploads also must not delay WAV encoding for hot requests.
+        app.state.prompt_prepare_limiter = anyio.CapacityLimiter(
+            DEFAULT_REQUEST_CPU_WORKERS
+        )
         runner = _build_runner(
             runner_name,
             model_checkpoint=model_checkpoint,
@@ -1694,7 +1706,7 @@ def create_app(
         response_class=Response,
         responses={200: {"content": {"audio/wav": {}}}},
     )
-    def generate(
+    async def generate(
         mode: GenerateMode = Form(...),
         text: str = Form(...),
         language: str | None = Form(None),
@@ -1839,61 +1851,73 @@ def create_app(
             voice_clone_prompt = None
             if mode == GenerateMode.clone:
                 prompt_started_perf = time.perf_counter()
-                if prompt_id_value is not None:
-                    prompt_store = app.state.registered_clone_prompts
-                    if prompt_store is None or prompt_store.max_size <= 0:
-                        raise HTTPException(
-                            503,
-                            detail="Registered clone prompt store is disabled.",
-                        )
-                    voice_clone_prompt = prompt_store.get(prompt_id_value)
-                    if voice_clone_prompt is None:
-                        raise HTTPException(404, detail="Unknown prompt_id.")
-                    prompt_source = "prompt_id"
-                else:
-                    assert ref_audio is not None  # for type checkers
-                    ref_audio_bytes = ref_audio.file.read()
-                    if not ref_audio_bytes:
-                        raise HTTPException(400, detail="ref_audio is empty.")
 
-                    prompt_cache = app.state.clone_prompt_cache
-
-                    def _create_prompt() -> Any:
-                        return _on_gpu_thread(
-                            "clone_prompt_upload",
-                            lambda: prompt_to_cpu(
-                                _create_voice_clone_prompt(
-                                    model,
-                                    ref_audio_bytes=ref_audio_bytes,
-                                    ref_text=ref_text_value,
-                                    preprocess_prompt=preprocess_prompt,
-                                    asr_load_lock=app.state.asr_load_lock,
-                                    allow_lazy_asr=app.state.allow_lazy_asr,
-                                )
-                            ),
-                        )
-
-                    if prompt_cache is None:
-                        voice_clone_prompt = _create_prompt()
-                        prompt_source = "cache_disabled"
+                def _prepare_clone_prompt() -> None:
+                    nonlocal voice_clone_prompt, prompt_source
+                    if prompt_id_value is not None:
+                        prompt_store = app.state.registered_clone_prompts
+                        if prompt_store is None or prompt_store.max_size <= 0:
+                            raise HTTPException(
+                                503,
+                                detail="Registered clone prompt store is disabled.",
+                            )
+                        voice_clone_prompt = prompt_store.get(prompt_id_value)
+                        if voice_clone_prompt is None:
+                            raise HTTPException(404, detail="Unknown prompt_id.")
+                        prompt_source = "prompt_id"
                     else:
-                        prompt_result = prompt_cache.get_or_create(
-                            ref_audio_bytes=ref_audio_bytes,
-                            ref_text=ref_text_value,
-                            preprocess_prompt=preprocess_prompt,
-                            factory=_create_prompt,
-                        )
-                        voice_clone_prompt = prompt_result.prompt
-                        prompt_source = f"upload_{prompt_result.source}"
+                        assert ref_audio is not None  # for type checkers
+                        ref_audio_bytes = ref_audio.file.read()
+                        if not ref_audio_bytes:
+                            raise HTTPException(400, detail="ref_audio is empty.")
+
+                        prompt_cache = app.state.clone_prompt_cache
+
+                        def _create_prompt() -> Any:
+                            return _on_gpu_thread(
+                                "clone_prompt_upload",
+                                lambda: prompt_to_cpu(
+                                    _create_voice_clone_prompt(
+                                        model,
+                                        ref_audio_bytes=ref_audio_bytes,
+                                        ref_text=ref_text_value,
+                                        preprocess_prompt=preprocess_prompt,
+                                        asr_load_lock=app.state.asr_load_lock,
+                                        allow_lazy_asr=app.state.allow_lazy_asr,
+                                    )
+                                ),
+                            )
+
+                        if prompt_cache is None:
+                            voice_clone_prompt = _create_prompt()
+                            prompt_source = "cache_disabled"
+                        else:
+                            prompt_result = prompt_cache.get_or_create(
+                                ref_audio_bytes=ref_audio_bytes,
+                                ref_text=ref_text_value,
+                                preprocess_prompt=preprocess_prompt,
+                                factory=_create_prompt,
+                            )
+                            voice_clone_prompt = prompt_result.prompt
+                            prompt_source = f"upload_{prompt_result.source}"
+
+                await anyio.to_thread.run_sync(
+                    _prepare_clone_prompt,
+                    limiter=(
+                        app.state.request_cpu_limiter
+                        if prompt_id_value is not None
+                        else app.state.prompt_prepare_limiter
+                    ),
+                )
                 prompt_prepare_ms = (time.perf_counter() - prompt_started_perf) * 1000.0
 
             batched_instruct = None
             if mode in {GenerateMode.design, GenerateMode.clone} and instruct_value:
                 batched_instruct = instruct_value
 
-            results = []
-            for sentence in sentences:
-                batch_estimate_started_perf = time.perf_counter()
+            def _prepare_generation(
+                sentence: str,
+            ) -> tuple[PendingGeneration, GenerationBatchKey]:
                 target_tokens = _estimate_target_tokens(
                     model,
                     text=sentence,
@@ -1910,9 +1934,6 @@ def create_app(
                     denoise=gen_config.denoise,
                     token_cache=app.state.token_estimate_cache,
                 )
-                batch_estimate_ms += (
-                    time.perf_counter() - batch_estimate_started_perf
-                ) * 1000.0
                 batch_key = _build_batch_key(
                     model,
                     voice_clone_prompt=voice_clone_prompt,
@@ -1934,9 +1955,22 @@ def create_app(
                     batch_key=batch_key,
                     generation_config=gen_config,
                 )
+                return pending, batch_key
+
+            results = []
+            for sentence in sentences:
+                batch_estimate_started_perf = time.perf_counter()
+                pending, batch_key = await anyio.to_thread.run_sync(
+                    _prepare_generation,
+                    sentence,
+                    limiter=app.state.request_cpu_limiter,
+                )
+                batch_estimate_ms += (
+                    time.perf_counter() - batch_estimate_started_perf
+                ) * 1000.0
                 if not results:
                     pre_batch_ms = (time.perf_counter() - request_started_perf) * 1000.0
-                results.append(batcher.submit(pending))
+                results.append(await batcher.submit_async(pending))
 
             batch_result = results[0]
             if len(results) > 1:
@@ -1963,26 +1997,36 @@ def create_app(
                 )
 
             response_encode_started_perf = time.perf_counter()
-            audio = _to_numpy(batch_result.audio)
-            sample_rate = int(
-                getattr(model, "sampling_rate", app.state.sample_rate)
-                or app.state.sample_rate
-            )
-            if len(results) > 1:
-                gap = np.zeros(round(sample_rate * PAUSE_SECONDS), dtype=audio.dtype)
-                parts = [audio]
-                for result in results[1:]:
-                    parts.extend((gap, _to_numpy(result.audio)))
-                audio = np.concatenate(parts)
-            wav_bytes = _to_wav_bytes(audio, sample_rate)
-            if app.state.save_dir is not None:
-                saved_path = _save_output(
-                    wav_bytes=wav_bytes,
-                    save_dir=app.state.save_dir,
-                    mode=mode,
-                    text=text_value,
-                    request_id=request_id,
+
+            def _encode_response() -> tuple[np.ndarray, int, bytes]:
+                nonlocal saved_path
+                audio = _to_numpy(batch_result.audio)
+                sample_rate = int(
+                    getattr(model, "sampling_rate", app.state.sample_rate)
+                    or app.state.sample_rate
                 )
+                if len(results) > 1:
+                    gap = np.zeros(
+                        round(sample_rate * PAUSE_SECONDS), dtype=audio.dtype
+                    )
+                    parts = [audio]
+                    for result in results[1:]:
+                        parts.extend((gap, _to_numpy(result.audio)))
+                    audio = np.concatenate(parts)
+                wav_bytes = _to_wav_bytes(audio, sample_rate)
+                if app.state.save_dir is not None:
+                    saved_path = _save_output(
+                        wav_bytes=wav_bytes,
+                        save_dir=app.state.save_dir,
+                        mode=mode,
+                        text=text_value,
+                        request_id=request_id,
+                    )
+                return audio, sample_rate, wav_bytes
+
+            audio, sample_rate, wav_bytes = await anyio.to_thread.run_sync(
+                _encode_response, limiter=app.state.request_cpu_limiter
+            )
             response_encode_ms = (
                 time.perf_counter() - response_encode_started_perf
             ) * 1000.0

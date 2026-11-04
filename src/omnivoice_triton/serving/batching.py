@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import gc
 import hashlib
 import logging
@@ -294,6 +295,27 @@ class GenerationBatcher:
 
     def submit(self, request: PendingGeneration) -> BatchedGenerationResult:
         """Queue a request and block until its merged batch finishes."""
+        return self._enqueue(request).result()
+
+    async def submit_async(self, request: PendingGeneration) -> BatchedGenerationResult:
+        """Wait for a batch without occupying an HTTP worker thread.
+
+        Cancellation removes work that has not begun inference. Once selected, a
+        batch runs to completion on its CUDA owner thread; kernels are not preempted.
+        """
+        future = self._enqueue(request)
+        try:
+            return await asyncio.wrap_future(future)
+        except asyncio.CancelledError:
+            with self._condition:
+                if future.cancel():
+                    self._pending = deque(
+                        item for item in self._pending if item is not request
+                    )
+                    self._condition.notify_all()
+            raise
+
+    def _enqueue(self, request: PendingGeneration) -> Future[BatchedGenerationResult]:
         with self._condition:
             self._raise_if_unavailable_locked()
             if len(self._pending) >= self.max_pending_requests:
@@ -303,7 +325,7 @@ class GenerationBatcher:
             self._pending.append(request)
             self._condition.notify()
 
-        return request.future.result()
+        return request.future
 
     def run_on_gpu_thread(self, fn: Callable[[], T], *, name: str) -> T:
         """Run fn on the batcher thread between batches and return its result."""
@@ -329,7 +351,8 @@ class GenerationBatcher:
                 "max_pending_gpu_tasks": self.max_pending_gpu_tasks,
                 "oldest_pending_ms": (
                     max(0.0, time.perf_counter() - self._pending[0].enqueued_at) * 1000
-                    if self._pending else 0.0
+                    if self._pending
+                    else 0.0
                 ),
             }
 
@@ -359,10 +382,10 @@ class GenerationBatcher:
         error: BaseException,
     ) -> None:
         for request in pending:
-            if not request.future.done():
+            if request.future.set_running_or_notify_cancel():
                 request.future.set_exception(error)
         for task in tasks:
-            if not task.future.done():
+            if task.future.set_running_or_notify_cancel():
                 task.future.set_exception(error)
 
     def _run(self) -> None:
@@ -382,6 +405,8 @@ class GenerationBatcher:
                     self._pending and self._last_ran_task
                 )
                 task = self._tasks.popleft() if run_task else None
+                if task is not None and not task.future.set_running_or_notify_cancel():
+                    continue
                 self._last_ran_task = task is not None
                 if task is None:
                     if self.collect_ms > 0:
@@ -435,6 +460,9 @@ class GenerationBatcher:
                 logger.exception("CUDA fault callback failed.")
 
     def _select_batch_locked(self) -> list[PendingGeneration]:
+        self._pending = deque(
+            request for request in self._pending if not request.future.cancelled()
+        )
         if not self._pending:
             return []
 
@@ -491,7 +519,13 @@ class GenerationBatcher:
             )
 
         self._pending = remaining
-        return selected
+        # Claim futures under the same lock as selection. A cancellation that wins
+        # this race is skipped; after this point CUDA work cannot be preempted.
+        return [
+            request
+            for request in selected
+            if request.future.set_running_or_notify_cancel()
+        ]
 
     def _apply_batch_buckets(
         self,

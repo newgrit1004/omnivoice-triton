@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 import threading
 import time
@@ -180,6 +181,92 @@ def test_gpu_tasks_and_batches_take_turns() -> None:
 
     assert order[0] == "batch"
     assert sorted(order[1:]) == ["task0", "task1", "task2", "task3"]
+
+
+def test_async_cancellation_removes_queued_work_and_releases_capacity() -> None:
+    entered, release = threading.Event(), threading.Event()
+    generated: list[str] = []
+
+    def generate(**kwargs):
+        generated.extend(kwargs["text"])
+        return [np.zeros(10, dtype=np.float32) for _ in kwargs["text"]]
+
+    def blocker():
+        entered.set()
+        assert release.wait(5)
+
+    batcher = GenerationBatcher(
+        SimpleNamespace(generate=generate), collect_ms=0, max_pending_requests=1
+    )
+
+    async def run():
+        canceled = _pending_generation("canceled")
+        canceled.text = "Must never run."
+        waiter = asyncio.create_task(batcher.submit_async(canceled))
+        await asyncio.sleep(0)
+        assert batcher.queue_snapshot()["pending_requests"] == 1
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        assert canceled.future.cancelled()
+        assert batcher.queue_snapshot()["pending_requests"] == 0
+
+        replacement = asyncio.create_task(
+            batcher.submit_async(_pending_generation("replacement"))
+        )
+        await asyncio.sleep(0)
+        release.set()
+        await asyncio.wait_for(replacement, timeout=2)
+
+    try:
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            running = pool.submit(batcher.run_on_gpu_thread, blocker, name="blocker")
+            assert entered.wait(2)
+            asyncio.run(run())
+            running.result(timeout=2)
+        assert generated == ["Hello."]
+        assert batcher.cuda_fault is None
+    finally:
+        release.set()
+        batcher.close()
+
+
+def test_async_cancellation_during_inference_does_not_break_worker() -> None:
+    entered, release = threading.Event(), threading.Event()
+
+    def generate(**kwargs):
+        entered.set()
+        assert release.wait(5)
+        return [np.zeros(10, dtype=np.float32) for _ in kwargs["text"]]
+
+    batcher = GenerationBatcher(SimpleNamespace(generate=generate), collect_ms=0)
+    pending = _pending_generation("in-flight")
+
+    async def run():
+        waiter = asyncio.create_task(batcher.submit_async(pending))
+        assert await asyncio.to_thread(entered.wait, 2)
+        assert pending.future.running()
+        waiter.cancel()
+        with pytest.raises(asyncio.CancelledError):
+            await waiter
+        # CUDA inference is already running. Complete it safely, even though the
+        # caller no longer needs its output, then verify the same worker still runs.
+        assert not pending.future.cancelled()
+        release.set()
+        assert (
+            await asyncio.to_thread(
+                batcher.run_on_gpu_thread, lambda: "healthy", name="after"
+            )
+            == "healthy"
+        )
+        assert pending.future.result(timeout=1).audio.shape == (10,)
+
+    try:
+        asyncio.run(run())
+        assert batcher.cuda_fault is None
+    finally:
+        release.set()
+        batcher.close()
 
 
 def test_failed_gpu_task_releases_its_frames(batcher_and_faults, monkeypatch) -> None:
